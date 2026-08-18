@@ -9,3 +9,13 @@ coverage/
 # generated
 packages/db/src/generated/
 *.tsbuildinfo
+
+# AI-agent config stays local (never committed)
+.claude/
+CLAUDE.md
+AGENTS.md
+.cursor/
+.cursorrules
+.windsurfrules
+.github/copilot-instructions.md
+.aider*
