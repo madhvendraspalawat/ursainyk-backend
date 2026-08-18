@@ -1,0 +1,22 @@
+{
+  "name": "nabhahita-backend",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Nabhahita Phase 1 — API, workers, engines (NestJS + Prisma + BullMQ)",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@11.22.0",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "build": "pnpm -r --workspace-concurrency=1 build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "dev": "pnpm --filter api start:dev",
+    "openapi:export": "pnpm --filter api openapi:export",
+    "db:generate": "pnpm --filter @nabhahita/db generate",
+    "db:migrate": "pnpm --filter @nabhahita/db migrate:dev"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

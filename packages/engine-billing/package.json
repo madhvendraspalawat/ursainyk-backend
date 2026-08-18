@@ -1,0 +1,18 @@
+{
+  "name": "@nabhahita/engine-billing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure billing/payout engine: verification results → invoice & payout lines (integer paise)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"(lint) @nabhahita/engine-billing — no linter configured yet\"",
+    "test": "echo \"(test) @nabhahita/engine-billing — no tests yet\""
+  },
+  "devDependencies": {
+    "@nabhahita/config": "workspace:*",
+    "typescript": "~5.9.3"
+  }
+}

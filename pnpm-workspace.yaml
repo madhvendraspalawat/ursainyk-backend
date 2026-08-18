@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 11: workspace-level settings live here (.npmrc is registry/auth only)
+minimumReleaseAge: 0
+allowBuilds:
+  prisma: true
+  "@prisma/engines": true
+  "@swc/core": true
+  esbuild: true
+  unrs-resolver: true

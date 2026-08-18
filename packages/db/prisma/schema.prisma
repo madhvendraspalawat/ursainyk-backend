@@ -1,0 +1,12 @@
+// Nabhahita Phase 1 — Prisma 7 schema. DRAFT: models arrive with the data-dictionary at kickoff (master doc §12).
+// This package is the ONLY owner of the RDS schema (ADR-0003). The landing page's Lead model migrates in here.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs" // NestJS builds CommonJS
+}
+
+datasource db {
+  provider = "postgresql"
+}
