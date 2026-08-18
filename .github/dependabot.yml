@@ -12,3 +12,7 @@ updates:
   - package-ecosystem: docker
     directory: /
     schedule: { interval: weekly }
+    ignore:
+      # Node major is a deliberate decision (.node-version), not a dependabot bump.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
