@@ -1,6 +1,6 @@
 # nabhahita-backend
 
-Nabhahita Phase 1 ("Career Distribution") — API, workers and engines.
+**Ergaxis** — Nabhahita's Phase 1 employment platform ("Career Distribution"): API, workers and engines. *Naming:* the product/brand is **Ergaxis** (decided 2026-08-19); Nabhahita is the client company — repo names and the `@nabhahita/*` scope refer to the client project.
 Companion repo: [`nabhahita-frontend`](https://github.com/madhvendraspalawat/nabhahita-frontend) (mobile app + web portals), joined by `openapi/openapi.json`.
 
 ## Stack
