@@ -1,5 +1,5 @@
 {
-  "name": "@nabhahita/config",
+  "name": "@ergaxis/config",
   "version": "0.0.0",
   "private": true,
   "description": "Shared tsconfig / lint presets",

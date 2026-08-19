@@ -1,5 +1,5 @@
 {
-  "name": "@nabhahita/worker",
+  "name": "@ergaxis/worker",
   "version": "0.0.0",
   "private": true,
   "description": "BullMQ workers: parser jobs, verification cycles, billing runs, notification relay",
@@ -7,13 +7,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"(lint) @nabhahita/worker \u2014 no linter configured yet\"",
-    "test": "echo \"(test) @nabhahita/worker \u2014 no tests yet\"",
+    "lint": "echo \"(lint) @ergaxis/worker \u2014 no linter configured yet\"",
+    "test": "echo \"(test) @ergaxis/worker \u2014 no tests yet\"",
     "start": "node dist/main.js",
     "start:dev": "tsx watch src/main.ts"
   },
   "devDependencies": {
-    "@nabhahita/config": "workspace:*",
+    "@ergaxis/config": "workspace:*",
     "typescript": "~5.9.3",
     "tsx": "^4.20.0",
     "@types/node": "^24.0.0"

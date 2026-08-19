@@ -1,7 +1,7 @@
-# nabhahita-backend
+# ergaxis-backend
 
-**Ergaxis** — Nabhahita's Phase 1 employment platform ("Career Distribution"): API, workers and engines. *Naming:* the product/brand is **Ergaxis** (decided 2026-08-19); Nabhahita is the client company — repo names and the `@nabhahita/*` scope refer to the client project.
-Companion repo: [`nabhahita-frontend`](https://github.com/madhvendraspalawat/nabhahita-frontend) (mobile app + web portals), joined by `openapi/openapi.json`.
+**Ergaxis** — Nabhahita's Phase 1 employment platform ("Career Distribution"): API, workers and engines. *Naming:* the product/brand is **Ergaxis** (decided 2026-08-19); Nabhahita is the client company — repos and packages are scoped `ergaxis-*` / `@ergaxis/*` (renamed 2026-08-19; GitHub redirects the old `nabhahita-*` names).
+Companion repo: [`ergaxis-frontend`](https://github.com/madhvendraspalawat/ergaxis-frontend) (mobile app + web portals), joined by `openapi/openapi.json`.
 
 ## Stack
 NestJS 11 (modular monolith) · BullMQ 6 + Redis · Prisma 7 + PostgreSQL 16 (AWS RDS ap-south-1) · S3 · Docker/ECS Fargate · GitHub Actions.

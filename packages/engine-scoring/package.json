@@ -1,5 +1,5 @@
 {
-  "name": "@nabhahita/engine-scoring",
+  "name": "@ergaxis/engine-scoring",
   "version": "0.0.0",
   "private": true,
   "description": "Pure scoring engine: (profile, preset) → score + explanation",
@@ -8,11 +8,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"(lint) @nabhahita/engine-scoring — no linter configured yet\"",
-    "test": "echo \"(test) @nabhahita/engine-scoring — no tests yet\""
+    "lint": "echo \"(lint) @ergaxis/engine-scoring — no linter configured yet\"",
+    "test": "echo \"(test) @ergaxis/engine-scoring — no tests yet\""
   },
   "devDependencies": {
-    "@nabhahita/config": "workspace:*",
+    "@ergaxis/config": "workspace:*",
     "typescript": "~5.9.3"
   }
 }

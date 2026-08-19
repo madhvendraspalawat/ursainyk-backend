@@ -1,5 +1,5 @@
 {
-  "name": "@nabhahita/db",
+  "name": "@ergaxis/db",
   "version": "0.0.0",
   "private": true,
   "description": "Prisma 7 schema, migrations, seed, client \u2014 the single owner of the RDS schema",
@@ -8,15 +8,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"(lint) @nabhahita/db \u2014 no linter configured yet\"",
-    "test": "echo \"(test) @nabhahita/db \u2014 no tests yet\"",
+    "lint": "echo \"(lint) @ergaxis/db \u2014 no linter configured yet\"",
+    "test": "echo \"(test) @ergaxis/db \u2014 no tests yet\"",
     "generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
-    "@nabhahita/config": "workspace:*",
+    "@ergaxis/config": "workspace:*",
     "typescript": "~5.9.3",
     "prisma": "^7.9.1",
     "dotenv": "^17.4.2",

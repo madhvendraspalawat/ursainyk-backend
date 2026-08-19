@@ -4,7 +4,7 @@
 
 ## Decision
 
-All monetary values are `BigInt` paise. No floats or decimals anywhere in engine or schema. Verification results are immutable facts; invoices and payouts are projections computed by `@nabhahita/engine-billing` (pure functions, pinned tests) and recorded as append-only `LedgerEntry` rows (Helland, *Immutability Changes Everything*; Fowler, *Accounting Patterns*). Splits use largest-remainder so parts always sum. Every money-moving write carries an idempotency key (Stripe pattern).
+All monetary values are `BigInt` paise. No floats or decimals anywhere in engine or schema. Verification results are immutable facts; invoices and payouts are projections computed by `@ergaxis/engine-billing` (pure functions, pinned tests) and recorded as append-only `LedgerEntry` rows (Helland, *Immutability Changes Everything*; Fowler, *Accounting Patterns*). Splits use largest-remainder so parts always sum. Every money-moving write carries an idempotency key (Stripe pattern).
 
 ## Consequences
 
