@@ -1,5 +1,5 @@
 {
-  "name": "@ergaxis/engine-billing",
+  "name": "@ursainyk/engine-billing",
   "version": "0.0.0",
   "private": true,
   "description": "Pure billing/payout engine: verification results → invoice & payout lines (integer paise)",
@@ -8,11 +8,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"(lint) @ergaxis/engine-billing — no linter configured yet\"",
-    "test": "echo \"(test) @ergaxis/engine-billing — no tests yet\""
+    "lint": "echo \"(lint) @ursainyk/engine-billing — no linter configured yet\"",
+    "test": "echo \"(test) @ursainyk/engine-billing — no tests yet\""
   },
   "devDependencies": {
-    "@ergaxis/config": "workspace:*",
+    "@ursainyk/config": "workspace:*",
     "typescript": "~5.9.3"
   }
 }

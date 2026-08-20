@@ -1,5 +1,5 @@
 {
-  "extends": "@ergaxis/config/tsconfig.base.json",
+  "extends": "@ursainyk/config/tsconfig.base.json",
   "compilerOptions": { "outDir": "dist", "rootDir": "src" },
   "include": ["src"]
 }

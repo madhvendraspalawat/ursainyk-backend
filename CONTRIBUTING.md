@@ -12,7 +12,7 @@
 
 - **Money = integer paise (`BigInt`)**, largest-remainder splits, ledger append-only (ADR-0005).
 - **Engines are pure**: no I/O in `packages/engine-*`; every published figure has a pinned test.
-- **zod at every boundary** (`@ergaxis/contracts`); never trust client payloads.
+- **zod at every boundary** (`@ursainyk/contracts`); never trust client payloads.
 - **Authorization, territory scoping and employer masking are server-side.** UI gating is UX only. RLS underneath (ADR-0007).
 - **Audit everything money- or masking-related, including reads** (ADR-0006).
 - **No PII in logs, tests, seeds or fixtures.** Synthetic data only. Redact in the logger.
@@ -25,4 +25,4 @@
 - `apps/api` — Nest app; one module per bounded context in `src/modules/*` (each has a README).
 - `apps/worker` — queue processors (separate deployable).
 - `packages/db` — the ONLY Prisma schema for the RDS · `packages/engine-*` — pure functions · `packages/contracts` — zod schemas (source of OpenAPI).
-- `openapi/openapi.json` — the contract consumed by `ergaxis-frontend`. Regenerate with `pnpm openapi:export`.
+- `openapi/openapi.json` — the contract consumed by `ursainyk-frontend`. Regenerate with `pnpm openapi:export`.

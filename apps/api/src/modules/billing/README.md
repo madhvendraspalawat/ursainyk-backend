@@ -1,2 +1,2 @@
 # billing module
-Invoice runs from verification results via @ergaxis/engine-billing; ledger (append-only); collections status.
+Invoice runs from verification results via @ursainyk/engine-billing; ledger (append-only); collections status.

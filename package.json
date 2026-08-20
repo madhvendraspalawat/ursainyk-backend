@@ -1,5 +1,5 @@
 {
-  "name": "ergaxis-backend",
+  "name": "ursainyk-backend",
   "private": true,
   "version": "0.0.0",
   "description": "Nabhahita Phase 1 — API, workers, engines (NestJS + Prisma + BullMQ)",
@@ -13,8 +13,8 @@
     "test": "pnpm -r test",
     "dev": "pnpm --filter api start:dev",
     "openapi:export": "pnpm --filter api openapi:export",
-    "db:generate": "pnpm --filter @ergaxis/db generate",
-    "db:migrate": "pnpm --filter @ergaxis/db migrate:dev"
+    "db:generate": "pnpm --filter @ursainyk/db generate",
+    "db:migrate": "pnpm --filter @ursainyk/db migrate:dev"
   },
   "devDependencies": {
     "typescript": "~5.9.3"

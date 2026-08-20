@@ -1,5 +1,5 @@
 {
-  "name": "@ergaxis/contracts",
+  "name": "@ursainyk/contracts",
   "version": "0.0.0",
   "private": true,
   "description": "zod schemas shared by api and worker; source of the OpenAPI contract",
@@ -8,11 +8,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"(lint) @ergaxis/contracts — no linter configured yet\"",
-    "test": "echo \"(test) @ergaxis/contracts — no tests yet\""
+    "lint": "echo \"(lint) @ursainyk/contracts — no linter configured yet\"",
+    "test": "echo \"(test) @ursainyk/contracts — no tests yet\""
   },
   "devDependencies": {
-    "@ergaxis/config": "workspace:*",
+    "@ursainyk/config": "workspace:*",
     "typescript": "~5.9.3"
   }
 }
