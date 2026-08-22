@@ -13,3 +13,4 @@ One file per decision, numbered, never edited after acceptance — supersede wit
 - [ADR-0009](./0009-mobile-two-variants.md) — One Expo codebase, two app variants (candidate / centre)
 - [ADR-0010](./0010-transactional-outbox.md) — Transactional outbox for notifications and domain events
 - [ADR-0011](./0011-product-name-ursainyk.md) — Product name is Ursainyk
+- [ADR-0012](./0012-audit-chain-and-decision-capture.md) — Hash-chained audit, two-tier visibility, decision capture for AI training
