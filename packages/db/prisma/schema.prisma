@@ -1,5 +1,7 @@
-// Nabhahita Phase 1 — Prisma 7 schema. DRAFT: models arrive with the data-dictionary at kickoff (master doc §12).
+// Nabhahita Phase 1 — Prisma 7 schema.
 // This package is the ONLY owner of the RDS schema (ADR-0003). The landing page's Lead model migrates in here.
+// Identity + RBAC core (ADR-0004, ADR-0006, ADR-0007). Domain models (candidate/requirement/placement)
+// arrive with their workstreams.
 
 generator client {
   provider     = "prisma-client"
@@ -9,4 +11,495 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ── Identity ────────────────────────────────────────────────────────────────
+
+enum UserKind {
+  CANDIDATE // mobile app, OTP-only (ADR-0004)
+  PORTAL // ESM / contractor / admin surfaces, email + password (+ TOTP for admin roles)
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+/// The 9 human roles. Service actors act under their own audit identity, not a row here.
+enum Role {
+  CANDIDATE
+  ESM_CENTRE
+  CONTRACTOR
+  REVIEWER
+  OPS
+  FINANCE
+  ESM_MANAGER
+  SALES_BD
+  SUPER_ADMIN
+}
+
+model User {
+  id     String     @id @default(uuid(7))
+  kind   UserKind
+  status UserStatus @default(ACTIVE)
+  /// Login identifier for CANDIDATE kind. E.164.
+  phone  String?    @unique
+  /// Login identifier for PORTAL kind.
+  email  String?    @unique
+  name   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  credential            Credential?
+  refreshTokens         RefreshToken[]
+  roles                 RoleAssignment[]       @relation("assignee")
+  rolesGranted          RoleAssignment[]       @relation("grantor")
+  centreMemberships     CentreMembership[]
+  contractorMemberships ContractorMembership[]
+  candidate             Candidate?
+}
+
+/// Secrets split from User so profile reads never touch hashes (ADR-0004).
+model Credential {
+  userId         String    @id
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// argon2id. Null for OTP-only candidates.
+  passwordHash   String?
+  /// Encrypted at rest (app-level). Mandatory for admin roles before first admin action.
+  totpSecret     String?
+  /// Set when the user proves possession of the TOTP secret. Enrollment is
+  /// pending (secret stored, unverified) until then — login ignores unverified secrets.
+  totpVerifiedAt DateTime?
+  /// OTP login state (MSG91 flow). Code stored hashed, short-lived.
+  otpHash        String?
+  otpExpiresAt   DateTime?
+  otpAttempts    Int       @default(0)
+  otpLockedTil   DateTime?
+  updatedAt      DateTime  @updatedAt
+}
+
+/// Rotating refresh tokens with server-side revocation (ADR-0004).
+/// Reuse of a revoked token revokes the whole family.
+model RefreshToken {
+  id        String    @id @default(uuid(7))
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  familyId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+// ── RBAC ────────────────────────────────────────────────────────────────────
+
+/// Join table, not an enum column: an admin can hold several sub-roles, and
+/// role assignments are audited facts (ADR-0006).
+model RoleAssignment {
+  id          String   @id @default(uuid(7))
+  userId      String
+  user        User     @relation("assignee", fields: [userId], references: [id], onDelete: Cascade)
+  role        Role
+  grantedById String?
+  grantedBy   User?    @relation("grantor", fields: [grantedById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, role])
+}
+
+// ── Org structure (feeds territory scoping, ADR-0007) ───────────────────────
+
+model Territory {
+  id           String            @id @default(uuid(7))
+  code         String            @unique
+  name         String
+  active       Boolean           @default(true)
+  centres      CentreTerritory[]
+  candidates   Candidate[]
+  requirements Requirement[]
+  placements   Placement[]
+}
+
+model EsmCentre {
+  id          String             @id @default(uuid(7))
+  code        String             @unique
+  name        String
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  territories CentreTerritory[]
+  members     CentreMembership[]
+  intakes     Candidate[]
+  placements  Placement[]
+}
+
+model CentreTerritory {
+  centreId    String
+  centre      EsmCentre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  territoryId String
+  territory   Territory @relation(fields: [territoryId], references: [id])
+
+  @@id([centreId, territoryId])
+}
+
+/// Membership of a portal user in a centre — the source of `app.territory_ids`
+/// set per transaction for RLS (ADR-0007).
+model CentreMembership {
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  centreId  String
+  centre    EsmCentre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@id([userId, centreId])
+}
+
+model ContractorOrg {
+  id           String                 @id @default(uuid(7))
+  name         String
+  active       Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  members      ContractorMembership[]
+  requirements Requirement[]
+  employer     EmployerIdentity?
+}
+
+model ContractorMembership {
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId     String
+  org       ContractorOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@id([userId, orgId])
+}
+
+// ── Audit (ADR-0006, ADR-0012) ──────────────────────────────────────────────
+
+/// Two-tier display: ADMIN rows visible to admin sub-roles; SUPER rows
+/// (service/worker events, masked-read signals) visible to Super Admin only.
+enum AuditVisibility {
+  ADMIN
+  SUPER
+}
+
+/// Append-only + hash-chained (ADR-0012). Triggers in the migration:
+/// block UPDATE/DELETE, and compute hashPrev/hashSelf on INSERT so every
+/// row commits to the entire history before it. Never carries PII — decision
+/// payloads live in DecisionEvent (erasable) and link back here.
+model AuditLog {
+  id         BigInt          @id @default(autoincrement())
+  at         DateTime        @default(now())
+  /// 'user' | 'service' — service actors log under their own identity.
+  actorType  String
+  actorId    String?
+  /// Dotted verb, e.g. 'auth.login', 'role.grant', 'masked_employer.read'.
+  action     String
+  entity     String
+  entityId   String?
+  data       Json?
+  visibility AuditVisibility @default(ADMIN)
+  /// Set by the chain trigger — never by application code.
+  hashPrev   String?
+  hashSelf   String?
+
+  @@index([entity, entityId])
+  @@index([actorId, at])
+  @@index([action, at])
+  @@index([visibility, at])
+}
+
+// ── Decision capture for AI training (ADR-0012) ─────────────────────────────
+
+enum DecisionType {
+  REVIEWER_CORRECTION // parser output vs corrected profile → in-house parser training
+  MATCHING // requirement×candidate accept/reject → future auto-matching
+  VERIFICATION_OUTCOME // active/left/win-back → churn prediction
+  SCORING_OVERRIDE // preset score vs manual adjustment → score calibration
+}
+
+/// Erasable training payloads, pseudonymized (DPDP). The tamper-evident fact
+/// that a decision happened lives in the chained AuditLog row (auditLogId);
+/// erasure nulls payloads here without touching the chain.
+model DecisionEvent {
+  id           String       @id @default(uuid(7))
+  at           DateTime     @default(now())
+  decisionType DecisionType
+  /// e.g. 'candidate', 'placement'.
+  subjectType  String
+  /// Opaque pseudonym from SubjectPseudonym — never a raw entity id.
+  subjectKey   String
+  actorRole    String?
+  /// Internal only — excluded from every training export.
+  actorId      String?
+  /// Verbose features: location, language, salary band, timings… PII-tokenized.
+  context      Json?
+  input        Json?
+  output       Json?
+  label        String?
+  rationale    String?
+  auditLogId   BigInt?
+  /// Consent basis under which this row may be used for training, e.g. 'consent:v1'.
+  consentBasis String
+  erasedAt     DateTime?
+
+  @@index([decisionType, at])
+  @@index([subjectType, subjectKey])
+}
+
+// ── Candidates (Phase 1 intake; parser/scoring fill the rest) ───────────────
+
+enum CandidateStatus {
+  DRAFT // self-serve, still editing
+  PENDING_REVIEW // submitted (self) or intaken (ESM walk-in) — Reviewer gate next
+  APPROVED
+  REJECTED
+}
+
+/// Territory-scoped by Postgres RLS (FORCEd; policy in the migration):
+/// ESM sessions see only rows in their territories; self/admin access runs
+/// under the '*' scope with explicit ownership filters (ADR-0007).
+model Candidate {
+  id          String          @id @default(uuid(7))
+  /// Linked app account. Null for walk-ins until the candidate first logs in.
+  userId      String?         @unique
+  user        User?           @relation(fields: [userId], references: [id])
+  /// Null for self-serve signups until a centre/territory is assigned.
+  territoryId String?
+  territory   Territory?      @relation(fields: [territoryId], references: [id])
+  /// Intake centre for walk-ins.
+  centreId    String?
+  centre      EsmCentre?      @relation(fields: [centreId], references: [id])
+  /// ESM portal user who performed walk-in intake.
+  createdById String?
+  status      CandidateStatus @default(DRAFT)
+
+  name              String
+  phone             String
+  languages         String[]
+  qualification     String?
+  educationLevel    String?
+  totalExpMonths    Int?
+  relevantExpMonths Int?
+  city              String?
+  pincode           String?
+  locationFlexible  Boolean?
+  /// Full structured profile (guided form now; parser output later, ADR-0008).
+  profile           Json?
+  score             Int?
+  scoreBreakdown    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  suggestions MatchSuggestion[]
+  placements  Placement[]
+
+  @@index([territoryId, status])
+  @@index([phone])
+}
+
+// ── Requirements & employer masking (Contractor / Sales BD; ADR-0006/0007) ──
+
+enum RequirementStatus {
+  OPEN
+  CLOSED
+}
+
+/// Employer identity deliberately does NOT live here — DTOs for ESM/candidate
+/// strip orgId entirely (a stable uuid is itself correlatable identity).
+/// RLS territory policy gates the ESM feed; org scoping is app-level.
+model Requirement {
+  id             String            @id @default(uuid(7))
+  orgId          String
+  org            ContractorOrg     @relation(fields: [orgId], references: [id])
+  roleTitle      String
+  headcount      Int
+  city           String?
+  territoryId    String?
+  territory      Territory?        @relation(fields: [territoryId], references: [id])
+  salaryMinPaise BigInt?
+  salaryMaxPaise BigInt?
+  terms          String?
+  status         RequirementStatus @default(OPEN)
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  suggestions MatchSuggestion[]
+  placements  Placement[]
+
+  @@index([territoryId, status])
+  @@index([orgId, status])
+}
+
+/// The masked join (ADR-0007): reading this via the unmask endpoint is
+/// audit-logged as masked_employer.read at SUPER visibility (ADR-0006).
+model EmployerIdentity {
+  orgId        String        @id
+  org          ContractorOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  companyName  String
+  contactName  String?
+  contactPhone String?
+  updatedAt    DateTime      @updatedAt
+}
+
+// ── Matching (Phase 1 manual-assisted) ──────────────────────────────────────
+
+enum SuggestionStatus {
+  SUGGESTED
+  ACCEPTED
+  DISMISSED
+}
+
+/// Ops suggests (placement:read only per matrix); ESM accepts → Placement.
+/// Both steps are MATCHING DecisionEvents (ADR-0012).
+model MatchSuggestion {
+  id            String           @id @default(uuid(7))
+  requirementId String
+  requirement   Requirement      @relation(fields: [requirementId], references: [id])
+  candidateId   String
+  candidate     Candidate        @relation(fields: [candidateId], references: [id])
+  suggestedById String
+  status        SuggestionStatus @default(SUGGESTED)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([requirementId, candidateId])
+}
+
+// ── Placements (ESM pipeline) ───────────────────────────────────────────────
+
+enum PlacementStage {
+  MET
+  SUITABLE
+  CALLBACK
+  PLACED
+  JOINED
+}
+
+/// Territory-scoped by RLS like Candidate (policy in the migration).
+model Placement {
+  id            String         @id @default(uuid(7))
+  candidateId   String
+  candidate     Candidate      @relation(fields: [candidateId], references: [id])
+  requirementId String
+  requirement   Requirement    @relation(fields: [requirementId], references: [id])
+  centreId      String?
+  centre        EsmCentre?     @relation(fields: [centreId], references: [id])
+  territoryId   String?
+  territory     Territory?     @relation(fields: [territoryId], references: [id])
+  stage         PlacementStage @default(MET)
+  joinedAt      DateTime?
+  createdById   String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  verifications Verification[]
+
+  @@index([territoryId, stage])
+  @@index([requirementId])
+  @@index([candidateId])
+}
+
+// ── Monthly active-verification (immutable facts, ADR-0005) ─────────────────
+
+enum VerificationOutcome {
+  ACTIVE
+  LEFT
+  WON_BACK
+}
+
+/// Immutable: a block-mutation trigger (migration) rejects UPDATE/DELETE.
+/// Corrections are new facts, never edits. Drives invoices AND payouts.
+model Verification {
+  id            String              @id @default(uuid(7))
+  placementId   String
+  placement     Placement           @relation(fields: [placementId], references: [id])
+  /// 'YYYY-MM'
+  period        String
+  outcome       VerificationOutcome
+  submittedById String
+  notes         String?
+  createdAt     DateTime            @default(now())
+
+  @@unique([placementId, period])
+  @@index([period, outcome])
+}
+
+// ── Ledger (ADR-0005: integer paise, append-only, idempotent) ───────────────
+
+enum LedgerKind {
+  INVOICE_LINE
+  PAYOUT_LINE
+}
+
+/// Append-only (trigger). Invoices/payouts are projections over these rows —
+/// derived numbers are recomputable, never hand-edited.
+model LedgerEntry {
+  id             BigInt     @id @default(autoincrement())
+  at             DateTime   @default(now())
+  runId          String
+  /// 'YYYY-MM'
+  period         String
+  kind           LedgerKind
+  amountPaise    BigInt
+  orgId          String?
+  centreId       String?
+  placementId    String
+  idempotencyKey String     @unique
+
+  @@index([period, kind])
+  @@index([orgId, period])
+  @@index([centreId, period])
+}
+
+// ── Ops / Super Admin configuration ─────────────────────────────────────────
+
+model ScoringPreset {
+  id        String   @id @default(uuid(7))
+  name      String
+  /// {qualification, education, totalExp, relevantExp, language, locationFlexibility} — percent weights.
+  weights   Json
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ── Transactional outbox (ADR-0010) ─────────────────────────────────────────
+
+/// Domain events written in the SAME transaction as the state change they
+/// describe. The worker relays them to BullMQ and marks relayedAt —
+/// at-least-once, no dual writes. Consumers must be idempotent.
+model Outbox {
+  id        String    @id @default(uuid(7))
+  at        DateTime  @default(now())
+  /// Dotted event name: 'candidate.approved', 'placement.joined', 'verification.completed'.
+  eventType String
+  payload   Json
+  relayedAt DateTime?
+  attempts  Int       @default(0)
+  lastError String?
+
+  @@index([relayedAt, at])
+}
+
+/// subjectId ↔ opaque key mapping. DPDP erasure deletes the row, making all
+/// DecisionEvent rows under that key unlinkable to the person.
+model SubjectPseudonym {
+  subjectType String
+  subjectId   String
+  key         String   @unique @default(uuid(7))
+  createdAt   DateTime @default(now())
+
+  @@id([subjectType, subjectId])
 }

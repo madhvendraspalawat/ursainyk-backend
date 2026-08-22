@@ -1,5 +1,16 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import { AuditController } from './audit.controller';
+import { AuditService } from './audit.service';
+import { DecisionService } from './decision.service';
 
-/** AuditModule — see ./README.md. Empty until its workstream starts. */
-@Module({})
+/**
+ * AuditModule — append-only hash-chained audit log (ADR-0006, ADR-0012)
+ * plus AI-training decision capture. Global: every module audits.
+ */
+@Global()
+@Module({
+  controllers: [AuditController],
+  providers: [AuditService, DecisionService],
+  exports: [AuditService, DecisionService],
+})
 export class AuditModule {}

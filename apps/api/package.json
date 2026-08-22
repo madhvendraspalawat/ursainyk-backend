@@ -1,7 +1,7 @@
 {
   "name": "api",
   "version": "0.0.1",
-  "description": "Nabhahita API \u2014 NestJS REST + OpenAPI, modular monolith",
+  "description": "Nabhahita API — NestJS REST + OpenAPI, modular monolith",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -24,9 +24,23 @@
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/throttler": "^6.5.0",
+    "@ursainyk/contracts": "workspace:^",
+    "@ursainyk/db": "workspace:^",
+    "@ursainyk/engine-billing": "workspace:^",
+    "@ursainyk/engine-scoring": "workspace:^",
+    "@ursainyk/rbac": "workspace:^",
+    "argon2": "^0.45.1",
+    "dotenv": "^17.4.2",
+    "otplib": "^12.0.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -37,6 +51,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
+    "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

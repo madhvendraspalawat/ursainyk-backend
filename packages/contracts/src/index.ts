@@ -1,3 +1,9 @@
-// @ursainyk/contracts — zod schemas + inferred types shared by api and worker.
-// These schemas are the source of the OpenAPI document (via nestjs-zod) and therefore of the frontend client.
-export {};
+// @ursainyk/contracts — zod schemas shared by api and worker; source of the OpenAPI contract.
+export * from './auth';
+export * from './audit';
+export * from './users';
+export * from './candidates';
+export * from './review';
+export * from './requirements';
+export * from './placements';
+export * from './billing';

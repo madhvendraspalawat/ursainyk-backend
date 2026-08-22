@@ -1,0 +1,20 @@
+{
+  "name": "@ursainyk/rbac",
+  "version": "0.0.0",
+  "private": true,
+  "description": "RBAC matrix as code — pure, no I/O. Source of truth for authorization; pinned tests mirror the role/permission matrix.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"(lint) @ursainyk/rbac — no linter configured yet\"",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@ursainyk/config": "workspace:*",
+    "typescript": "~5.9.3",
+    "tsx": "^4.20.0",
+    "@types/node": "^24.0.0"
+  }
+}

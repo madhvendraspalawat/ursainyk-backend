@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrismaModule } from './prisma/prisma.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { DocumentsModule } from './modules/documents/documents.module';
@@ -24,6 +27,9 @@ import { AdminModule } from './modules/admin/admin.module';
  */
 @Module({
   imports: [
+    // Per-IP rate limiting; tight per-route overrides via @Throttle on auth endpoints.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
+    PrismaModule,
     IdentityModule,
     CandidatesModule,
     DocumentsModule,
@@ -42,6 +48,12 @@ import { AdminModule } from './modules/admin/admin.module';
     AdminModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Global guards run in module-init order (imports first), so the effective
+    // chain is authenticate -> authorize -> throttle; throttling covers @Public
+    // routes too, which is what the OTP/login limits are for.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

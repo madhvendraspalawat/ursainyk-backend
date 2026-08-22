@@ -5,8 +5,10 @@ packages:
 # pnpm 11: workspace-level settings live here (.npmrc is registry/auth only)
 minimumReleaseAge: 0
 allowBuilds:
+  argon2: true
   prisma: true
   "@prisma/engines": true
   "@swc/core": true
   esbuild: true
   unrs-resolver: true
+  msgpackr-extract: true
