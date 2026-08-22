@@ -1,0 +1,24 @@
+{
+  "name": "@ursainyk/parser",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Résumé parser behind an interface (ADR-0008): Claude vision at launch, deterministic stub for dev/tests, in-house OCR+NER later",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"(lint) @ursainyk/parser — no linter configured yet\"",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.18.0",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@ursainyk/config": "workspace:*",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3"
+  }
+}

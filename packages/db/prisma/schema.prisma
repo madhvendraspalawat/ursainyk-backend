@@ -297,9 +297,44 @@ model Candidate {
 
   suggestions MatchSuggestion[]
   placements  Placement[]
+  documents   Document[]
 
   @@index([territoryId, status])
   @@index([phone])
+}
+
+// ── Documents (résumé uploads → parser pipeline, ADR-0008) ──────────────────
+
+enum DocumentKind {
+  RESUME_PHOTO
+  RESUME_PDF
+}
+
+enum DocumentStatus {
+  PENDING_UPLOAD // presigned URL issued, upload not confirmed
+  UPLOADED // confirmed — parse job queued via outbox
+  PARSED
+  FAILED
+}
+
+/// Résumé artifacts in S3 (MinIO locally). Access is scoped through the
+/// owning candidate (own / territory / admin) — never by raw key.
+model Document {
+  id           String         @id @default(uuid(7))
+  candidateId  String
+  candidate    Candidate      @relation(fields: [candidateId], references: [id])
+  kind         DocumentKind
+  s3Key        String         @unique
+  mime         String
+  sizeBytes    Int?
+  status       DocumentStatus @default(PENDING_UPLOAD)
+  uploadedById String?
+  /// Parser failure reason (truncated) — never raw provider payloads.
+  error        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([candidateId, status])
 }
 
 // ── Requirements & employer masking (Contractor / Sales BD; ADR-0006/0007) ──

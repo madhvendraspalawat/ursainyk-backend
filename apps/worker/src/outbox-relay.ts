@@ -2,6 +2,12 @@ import { Queue } from 'bullmq';
 import type { Db } from '@ursainyk/db';
 
 export const NOTIFICATIONS_QUEUE = 'notifications';
+export const PARSER_QUEUE = 'parser';
+
+/** Event-type routing: parser work is heavy and rate-limited — own queue. */
+export function queueFor(eventType: string): 'parser' | 'notifications' {
+  return eventType.startsWith('document.') ? PARSER_QUEUE : NOTIFICATIONS_QUEUE;
+}
 
 const BATCH = 50;
 const POLL_MS = 2000;
@@ -19,7 +25,7 @@ export class OutboxRelay {
 
   constructor(
     private readonly db: Db,
-    private readonly queue: Queue,
+    private readonly queues: Record<'parser' | 'notifications', Queue>,
   ) {}
 
   start(): void {
@@ -46,10 +52,16 @@ export class OutboxRelay {
           FOR UPDATE SKIP LOCKED`;
         for (const row of rows) {
           try {
-            await this.queue.add(
+            await this.queues[queueFor(row.eventType)].add(
               row.eventType,
               { outboxId: row.id, eventType: row.eventType, payload: row.payload },
-              { jobId: row.id, removeOnComplete: 1000, removeOnFail: false },
+              {
+                jobId: row.id,
+                removeOnComplete: 1000,
+                removeOnFail: false,
+                attempts: 5,
+                backoff: { type: 'exponential', delay: 5000 },
+              },
             );
             await tx.outbox.update({ where: { id: row.id }, data: { relayedAt: new Date() } });
           } catch (e) {
