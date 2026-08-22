@@ -21,8 +21,10 @@ jobs:
       - run: pnpm db:generate
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # Build first: workspace packages resolve each other via dist/ types,
+      # so typecheck/lint need the topologically-ordered build output.
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm build
       - run: pnpm test
       # TODO: prisma migrate diff --exit-code against a service container; openapi:export + drift check
