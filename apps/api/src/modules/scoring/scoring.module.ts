@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { ScoringController } from './scoring.controller';
+import { ScoringService } from './scoring.service';
 
-/** ScoringModule — see ./README.md. Empty until its workstream starts. */
-@Module({})
+/** ScoringModule — preset config + overrides over the pure engine. */
+@Module({
+  controllers: [ScoringController],
+  providers: [ScoringService],
+  exports: [ScoringService],
+})
 export class ScoringModule {}

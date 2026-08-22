@@ -2,17 +2,19 @@
   "name": "@ursainyk/engine-billing",
   "version": "0.0.0",
   "private": true,
-  "description": "Pure billing/payout engine: verification results → invoice & payout lines (integer paise)",
+  "description": "Pure billing/payout engine: verification results \u2192 invoice & payout lines (integer paise)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"(lint) @ursainyk/engine-billing — no linter configured yet\"",
-    "test": "echo \"(test) @ursainyk/engine-billing — no tests yet\""
+    "lint": "echo \"(lint) @ursainyk/engine-billing \u2014 no linter configured yet\"",
+    "test": "tsx --test test/*.test.ts"
   },
   "devDependencies": {
     "@ursainyk/config": "workspace:*",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "tsx": "^4.20.0",
+    "@types/node": "^24.0.0"
   }
 }

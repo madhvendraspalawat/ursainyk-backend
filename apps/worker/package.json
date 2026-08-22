@@ -7,15 +7,20 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"(lint) @ursainyk/worker \u2014 no linter configured yet\"",
-    "test": "echo \"(test) @ursainyk/worker \u2014 no tests yet\"",
+    "lint": "echo \"(lint) @ursainyk/worker — no linter configured yet\"",
+    "test": "echo \"(test) @ursainyk/worker — no tests yet\"",
     "start": "node dist/main.js",
     "start:dev": "tsx watch src/main.ts"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "@ursainyk/config": "workspace:*",
-    "typescript": "~5.9.3",
     "tsx": "^4.20.0",
-    "@types/node": "^24.0.0"
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "@ursainyk/db": "workspace:^",
+    "bullmq": "^6.2.0",
+    "ioredis": "^6.0.0"
   }
 }

@@ -17,8 +17,14 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Generated Prisma client is gitignored; prisma.config.ts needs DATABASE_URL set (not used by generate).
+      - run: pnpm db:generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # Build first: workspace packages resolve each other via dist/ types,
+      # so typecheck/lint need the topologically-ordered build output.
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm build
       - run: pnpm test
-      # TODO (once schema exists): pnpm db:generate; prisma migrate diff --exit-code; openapi:export + drift check
+      # TODO: prisma migrate diff --exit-code against a service container; openapi:export + drift check
