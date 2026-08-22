@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { PlacementsController } from './placements.controller';
+import { PlacementsService } from './placements.service';
 
-/** PlacementsModule — see ./README.md. Empty until its workstream starts. */
-@Module({})
+/** PlacementsModule — the ESM pipeline (ADR-0007 scoping, forward-only stages). */
+@Module({
+  controllers: [PlacementsController],
+  providers: [PlacementsService],
+  exports: [PlacementsService],
+})
 export class PlacementsModule {}

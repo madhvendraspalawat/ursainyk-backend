@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { VerificationController } from './verification.controller';
+import { VerificationService } from './verification.service';
 
-/** VerificationModule — see ./README.md. Empty until its workstream starts. */
-@Module({})
+/** VerificationModule — immutable monthly facts that drive all money (ADR-0005). */
+@Module({
+  controllers: [VerificationController],
+  providers: [VerificationService],
+  exports: [VerificationService],
+})
 export class VerificationModule {}
