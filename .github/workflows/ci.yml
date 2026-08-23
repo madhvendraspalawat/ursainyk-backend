@@ -46,3 +46,7 @@ jobs:
           pnpm --filter @ursainyk/db exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # e2e: full AppModule against a fresh database (globalSetup creates ursainyk_e2e).
+      - run: pnpm --filter api test:e2e
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci

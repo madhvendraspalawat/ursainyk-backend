@@ -28,7 +28,11 @@ import { AdminModule } from './modules/admin/admin.module';
 @Module({
   imports: [
     // Per-IP rate limiting; tight per-route overrides via @Throttle on auth endpoints.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 20 }],
+      // e2e suites hammer auth endpoints by design; prod never sets this.
+      skipIf: () => process.env.THROTTLE_DISABLED === '1',
+    }),
     PrismaModule,
     IdentityModule,
     CandidatesModule,
