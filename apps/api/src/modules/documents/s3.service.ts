@@ -57,7 +57,13 @@ export class S3Service implements OnModuleInit {
   presignDownload(key: string): Promise<string> {
     return getSignedUrl(
       this.client,
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        // Serving hardening: force download + the stored content type, so a
+        // crafted file can never render/execute in a portal browser tab.
+        ResponseContentDisposition: 'attachment',
+      }),
       {
         expiresIn: PRESIGN_TTL_SECONDS,
       },

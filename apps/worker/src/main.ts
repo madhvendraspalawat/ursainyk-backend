@@ -17,7 +17,7 @@ async function main() {
   const notificationsQueue = new Queue(NOTIFICATIONS_QUEUE, { connection: queueConnection });
   const parserQueue = new Queue(PARSER_QUEUE, { connection: queueConnection });
   const relay = new OutboxRelay(db, { notifications: notificationsQueue, parser: parserQueue });
-  const notifications = startNotificationsWorker(workerConnection);
+  const notifications = startNotificationsWorker(workerConnection, db);
   const parserWorker = startParserWorker(createRedis(), db);
 
   relay.start();

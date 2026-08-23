@@ -1,1 +1,3740 @@
-{}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ursainyk API",
+    "version": "0.1.0",
+    "description": "Nabhahita Phase 1 — candidates, ESM centres, contractors, review gate, matching, verification, billing. Authorization is role-based (see x-required-permission per operation); scoping (territory/org/own) is enforced server-side."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "local dev"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/auth/otp/request": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request candidate OTP (auto-registers unknown phones)",
+        "operationId": "post_auth_otp_request",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+[1-9]\\d{7,14}$"
+                  }
+                },
+                "required": [
+                  "phone"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/otp/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify OTP → token pair",
+        "operationId": "post_auth_otp_verify",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    },
+                    "expiresIn": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "accessToken",
+                    "refreshToken",
+                    "expiresIn"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+[1-9]\\d{7,14}$"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Portal login (TOTP required for enrolled admins)",
+        "operationId": "post_auth_login",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    },
+                    "expiresIn": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "accessToken",
+                    "refreshToken",
+                    "expiresIn"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  },
+                  "totp": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Rotate refresh token (reuse revokes the family)",
+        "operationId": "post_auth_refresh",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "refreshToken": {
+                      "type": "string"
+                    },
+                    "expiresIn": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "accessToken",
+                    "refreshToken",
+                    "expiresIn"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "minLength": 32,
+                    "maxLength": 512
+                  }
+                },
+                "required": [
+                  "refreshToken"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke all refresh tokens",
+        "operationId": "post_auth_logout",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Current principal (roles, territories, orgs)",
+        "operationId": "get_auth_me",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        }
+      }
+    },
+    "/auth/password/change": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change own password (revokes all sessions)",
+        "operationId": "post_auth_password_change",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/totp/enroll": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start TOTP enrollment → otpauth URI",
+        "operationId": "post_auth_totp_enroll",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        }
+      }
+    },
+    "/auth/totp/activate": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Prove TOTP possession — enforced at next login",
+        "operationId": "post_auth_totp_activate",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/users": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Create portal user (temp password returned once)",
+        "operationId": "post_identity_users",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "user_account:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "roles": {
+                    "minItems": 1,
+                    "maxItems": 4,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "ESM_CENTRE",
+                        "CONTRACTOR",
+                        "REVIEWER",
+                        "OPS",
+                        "FINANCE",
+                        "ESM_MANAGER",
+                        "SALES_BD",
+                        "SUPER_ADMIN"
+                      ]
+                    }
+                  },
+                  "centreId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "orgId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "email",
+                  "name",
+                  "roles"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/users/{id}/roles": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Grant role",
+        "operationId": "post_identity_users_id_roles",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "user_account:configure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "ESM_CENTRE",
+                      "CONTRACTOR",
+                      "REVIEWER",
+                      "OPS",
+                      "FINANCE",
+                      "ESM_MANAGER",
+                      "SALES_BD",
+                      "SUPER_ADMIN"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/users/{id}/roles/{role}": {
+      "delete": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Revoke role (revokes sessions)",
+        "operationId": "delete_identity_users_id_roles_role",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "user_account:configure"
+      }
+    },
+    "/identity/users/{id}/status": {
+      "patch": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Enable/disable user (disable = forced logout)",
+        "operationId": "patch_identity_users_id_status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "user_account:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "DISABLED"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/users/{id}/reset-password": {
+      "post": {
+        "tags": [
+          "identity"
+        ],
+        "summary": "Admin password reset (temp password returned once)",
+        "operationId": "post_identity_users_id_reset-password",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "user_account:update"
+      }
+    },
+    "/candidates/me": {
+      "get": {
+        "tags": [
+          "candidates"
+        ],
+        "summary": "Own profile (lazily created as DRAFT)",
+        "operationId": "get_candidates_me",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:read"
+      },
+      "patch": {
+        "tags": [
+          "candidates"
+        ],
+        "summary": "Update own draft profile",
+        "operationId": "patch_candidates_me",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "languages": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 20
+                    }
+                  },
+                  "qualification": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "educationLevel": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "totalExpMonths": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 720
+                  },
+                  "relevantExpMonths": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 720
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "pincode": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  },
+                  "locationFlexible": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/candidates/me/submit": {
+      "post": {
+        "tags": [
+          "candidates"
+        ],
+        "summary": "Submit for review",
+        "operationId": "post_candidates_me_submit",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:update"
+      }
+    },
+    "/candidates": {
+      "post": {
+        "tags": [
+          "candidates"
+        ],
+        "summary": "ESM walk-in intake (territory-fenced)",
+        "operationId": "post_candidates",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "languages": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 20
+                    }
+                  },
+                  "qualification": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "educationLevel": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "totalExpMonths": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 720
+                  },
+                  "relevantExpMonths": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 720
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "pincode": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  },
+                  "locationFlexible": {
+                    "type": "boolean"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+[1-9]\\d{7,14}$"
+                  },
+                  "territoryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "name",
+                  "phone",
+                  "territoryId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "candidates"
+        ],
+        "summary": "List (ESM: territory; admin: all)",
+        "operationId": "get_candidates",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PENDING_REVIEW",
+                "APPROVED",
+                "REJECTED"
+              ]
+            }
+          },
+          {
+            "name": "territoryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:read"
+      }
+    },
+    "/candidates/{id}": {
+      "get": {
+        "tags": [
+          "candidates"
+        ],
+        "summary": "Detail (scope-fenced)",
+        "operationId": "get_candidates_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:read"
+      }
+    },
+    "/review/queue": {
+      "get": {
+        "tags": [
+          "review"
+        ],
+        "summary": "Pending-review queue, oldest first",
+        "operationId": "get_review_queue",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:approve"
+      }
+    },
+    "/review/{id}/approve": {
+      "post": {
+        "tags": [
+          "review"
+        ],
+        "summary": "Approve with optional corrections (auto-scores; training capture)",
+        "operationId": "post_review_id_approve",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:approve",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "corrections": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "languages": {
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 20
+                        }
+                      },
+                      "qualification": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "educationLevel": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "totalExpMonths": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 720
+                      },
+                      "relevantExpMonths": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 720
+                      },
+                      "city": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "pincode": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      },
+                      "locationFlexible": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "rationale": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/review/{id}/reject": {
+      "post": {
+        "tags": [
+          "review"
+        ],
+        "summary": "Reject with rationale",
+        "operationId": "post_review_id_reject",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:approve",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "rationale": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "rationale"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/uploads": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Presigned upload URL (résumé photo/PDF)",
+        "operationId": "post_documents_uploads",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "RESUME_PHOTO",
+                      "RESUME_PDF"
+                    ]
+                  },
+                  "mime": {
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "candidateId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "mime"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{id}/confirm": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Confirm upload → ingestion pipeline (validate, scan, parse)",
+        "operationId": "post_documents_id_confirm",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:update"
+      }
+    },
+    "/documents/{id}": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Document + presigned download (attachment-only)",
+        "operationId": "get_documents_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_profile:read"
+      }
+    },
+    "/requirements": {
+      "post": {
+        "tags": [
+          "requirements"
+        ],
+        "summary": "Post requirement (contractor own org; Sales on behalf)",
+        "operationId": "post_requirements",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "requirement:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "roleTitle": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "headcount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "territoryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "salaryMinPaise": {},
+                  "salaryMaxPaise": {},
+                  "terms": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "orgId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "roleTitle",
+                  "headcount"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "requirements"
+        ],
+        "summary": "List: contractor=own, ESM=masked territory feed, admin=all",
+        "operationId": "get_requirements",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "requirement:read"
+      }
+    },
+    "/requirements/{id}": {
+      "get": {
+        "tags": [
+          "requirements"
+        ],
+        "summary": "Detail (masked for ESM)",
+        "operationId": "get_requirements_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "requirement:read"
+      },
+      "patch": {
+        "tags": [
+          "requirements"
+        ],
+        "summary": "Edit / close lifecycle",
+        "operationId": "patch_requirements_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "requirement:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "roleTitle": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "headcount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "territoryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "salaryMinPaise": {},
+                  "salaryMaxPaise": {},
+                  "terms": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "OPEN",
+                      "CLOSED"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/requirements/{id}/employer": {
+      "get": {
+        "tags": [
+          "requirements"
+        ],
+        "summary": "Unmask employer identity (audited, ADR-0006)",
+        "operationId": "get_requirements_id_employer",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "employer_identity:read"
+      }
+    },
+    "/placements": {
+      "post": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "Create placement (APPROVED candidate × OPEN requirement)",
+        "operationId": "post_placements",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "placement:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "candidateId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "requirementId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "candidateId",
+                  "requirementId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "List (ESM territory / contractor supplied / candidate own)",
+        "operationId": "get_placements",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MET",
+                "SUITABLE",
+                "CALLBACK",
+                "PLACED",
+                "JOINED"
+              ]
+            }
+          },
+          {
+            "name": "requirementId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "placement:read"
+      }
+    },
+    "/placements/{id}/stage": {
+      "patch": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "Advance pipeline (forward-only; JOINED stamps joinedAt)",
+        "operationId": "patch_placements_id_stage",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "placement:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "stage": {
+                    "type": "string",
+                    "enum": [
+                      "MET",
+                      "SUITABLE",
+                      "CALLBACK",
+                      "PLACED",
+                      "JOINED"
+                    ]
+                  }
+                },
+                "required": [
+                  "stage"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matching/suggestions": {
+      "post": {
+        "tags": [
+          "matching"
+        ],
+        "summary": "Ops suggests candidate×requirement (training capture)",
+        "operationId": "post_matching_suggestions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "match_suggestion:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "requirementId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "candidateId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "requirementId",
+                  "candidateId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "matching"
+        ],
+        "summary": "List suggestions",
+        "operationId": "get_matching_suggestions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requirementId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SUGGESTED",
+                "ACCEPTED",
+                "DISMISSED"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "match_suggestion:read"
+      }
+    },
+    "/matching/suggestions/{id}/accept": {
+      "post": {
+        "tags": [
+          "matching"
+        ],
+        "summary": "ESM accepts → placement",
+        "operationId": "post_matching_suggestions_id_accept",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "match_suggestion:update"
+      }
+    },
+    "/matching/suggestions/{id}/dismiss": {
+      "post": {
+        "tags": [
+          "matching"
+        ],
+        "summary": "ESM dismisses",
+        "operationId": "post_matching_suggestions_id_dismiss",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "match_suggestion:update"
+      }
+    },
+    "/matching/overview": {
+      "get": {
+        "tags": [
+          "matching"
+        ],
+        "summary": "Demand vs supply by territory",
+        "operationId": "get_matching_overview",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "match_suggestion:create"
+      }
+    },
+    "/verifications": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Submit immutable monthly fact (drives all money)",
+        "operationId": "post_verifications",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "verification:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "placementId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "period": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "LEFT",
+                      "WON_BACK"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "placementId",
+                  "period",
+                  "outcome"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verifications/due": {
+      "get": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "JOINED placements missing this period",
+        "operationId": "get_verifications_due",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "verification:create"
+      }
+    },
+    "/scoring/presets": {
+      "get": {
+        "tags": [
+          "scoring"
+        ],
+        "summary": "List presets (versioned, recomputable)",
+        "operationId": "get_scoring_presets",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_score:configure"
+      },
+      "put": {
+        "tags": [
+          "scoring"
+        ],
+        "summary": "New active preset",
+        "operationId": "put_scoring_presets",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_score:configure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "weights": {
+                    "type": "object",
+                    "properties": {
+                      "qualification": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "education": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "totalExp": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "relevantExp": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "language": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "locationFlexibility": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "required": [
+                      "qualification",
+                      "education",
+                      "totalExp",
+                      "relevantExp",
+                      "language",
+                      "locationFlexibility"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "name",
+                  "weights"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scoring/candidates/{id}/override": {
+      "post": {
+        "tags": [
+          "scoring"
+        ],
+        "summary": "Manual score override (training capture)",
+        "operationId": "post_scoring_candidates_id_override",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "candidate_score:configure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 900
+                  },
+                  "rationale": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "score",
+                  "rationale"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/runs": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Run billing for a period (idempotent, append-only ledger)",
+        "operationId": "post_billing_runs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "invoice:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "period": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "period",
+                  "idempotencyKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/invoices": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Invoice projections (contractor: own org)",
+        "operationId": "get_billing_invoices",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "centreId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "invoice:read"
+      }
+    },
+    "/payouts": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Payout projections (ESM: own centres)",
+        "operationId": "get_payouts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "centreId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "payout:read"
+      }
+    },
+    "/centres": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create ESM centre",
+        "operationId": "post_centres",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "esm_centre:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 30
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "code",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List centres + territories",
+        "operationId": "get_centres",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "esm_centre:read"
+      }
+    },
+    "/centres/{id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Activate/deactivate centre",
+        "operationId": "patch_centres_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "esm_centre:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "active"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/centres/{id}/territories/{territoryId}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Assign territory (redraws RLS perimeter; audited)",
+        "operationId": "post_centres_id_territories_territoryId",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "territoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "territory:update"
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Unassign territory",
+        "operationId": "delete_centres_id_territories_territoryId",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "territoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "territory:update"
+      }
+    },
+    "/centres/{id}/summary": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Centre performance snapshot",
+        "operationId": "get_centres_id_summary",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "esm_centre:read"
+      }
+    },
+    "/contractor-orgs": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Contractor org intake",
+        "operationId": "post_contractor-orgs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "contractor_org:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 160
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List orgs (identity excluded — masked table)",
+        "operationId": "get_contractor-orgs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "contractor_org:read"
+      }
+    },
+    "/contractor-orgs/{id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Edit org",
+        "operationId": "patch_contractor-orgs_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "contractor_org:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 160
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contractor-orgs/{id}/employer": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Upsert employer identity (the masked join)",
+        "operationId": "put_contractor-orgs_id_employer",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "contractor_org:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "companyName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 160
+                  },
+                  "contactName": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "contactPhone": {
+                    "type": "string",
+                    "maxLength": 20
+                  }
+                },
+                "required": [
+                  "companyName"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/territories": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Define territory",
+        "operationId": "post_territories",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "territory:create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 30
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "code",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "List territories",
+        "operationId": "get_territories",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "territory:read"
+      }
+    },
+    "/territories/{id}": {
+      "patch": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Edit territory",
+        "operationId": "patch_territories_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "territory:update",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "List system config",
+        "operationId": "get_config",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "system_config:read"
+      }
+    },
+    "/config/{key}": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Read config key",
+        "operationId": "get_config_key",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "system_config:read"
+      },
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Write config key (flags = flags.*; audited SUPER)",
+        "operationId": "put_config_key",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "system_config:configure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "value": {}
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit/logs": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Audit log (two-tier visibility)",
+        "operationId": "get_audit_logs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "entityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {}
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "default": 100,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "audit_log:read"
+      }
+    },
+    "/audit/chain/verify": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Walk the hash chain",
+        "operationId": "get_audit_chain_verify",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "training_data:configure"
+      }
+    },
+    "/audit/decisions/export": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Training-data export (NDJSON, pseudonymized)",
+        "operationId": "get_audit_decisions_export",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "REVIEWER_CORRECTION",
+                "MATCHING",
+                "VERIFICATION_OUTCOME",
+                "SCORING_OVERRIDE"
+              ]
+            }
+          },
+          {
+            "name": "consentBasis",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "default": 500,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "training_data:read"
+      }
+    },
+    "/audit/decisions/erase": {
+      "post": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "DPDP erasure of a subject",
+        "operationId": "post_audit_decisions_erase",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "training_data:configure",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "subjectType": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "subjectType",
+                  "subjectId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

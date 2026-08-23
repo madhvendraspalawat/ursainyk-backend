@@ -2,7 +2,12 @@ import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Worker, type Job } from 'bullmq';
 import type IORedis from 'ioredis';
 import type { Db } from '@ursainyk/db';
-import { createResumeParser, type ParsedProfile } from '@ursainyk/parser';
+import {
+  createResumeParser,
+  validateResumeFile,
+  type ParsedProfile,
+} from '@ursainyk/parser';
+import { clamavConfigured, scanBytes } from './clamav';
 import type { OutboxJob } from './notifications-worker';
 
 export const PARSER_QUEUE = 'parser';
@@ -38,6 +43,26 @@ export function startParserWorker(connection: IORedis, db: Db): Worker<OutboxJob
       try {
         const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: doc.s3Key }));
         const bytes = Buffer.from(await object.Body!.transformToByteArray());
+
+        // ── Ingestion pipeline: nothing about uploaded bytes is trusted. ──
+        // 1. Structural validation: size, magic bytes vs declared mime,
+        //    PDF threat heuristics, image-bomb guard (pure, pinned tests).
+        const verdict = validateResumeFile({ kind: doc.kind, mime: doc.mime, bytes });
+        if (!verdict.ok) {
+          await reject(db, doc.id, `validation: ${verdict.reason}`);
+          return; // rejected, not retried
+        }
+        // 2. Antivirus (when clamd is configured). Unreachable daemon throws
+        //    → retry; a configured scanner is never silently skipped.
+        if (clamavConfigured()) {
+          const scan = await scanBytes(bytes);
+          if (!scan.clean) {
+            await reject(db, doc.id, `malware: ${scan.signature ?? 'unknown signature'}`);
+            return;
+          }
+        }
+        // 3. Parse. The content stays untrusted — the extraction prompt treats
+        //    it as data, and zod bounds the output shape.
         const parsed = await parser.parse({ kind: doc.kind, mime: doc.mime, bytes });
         await applyProposal(db, doc.candidateId, doc.id, parsed, parser.name);
       } catch (e) {
@@ -54,6 +79,25 @@ export function startParserWorker(connection: IORedis, db: Db): Worker<OutboxJob
       // Retry with backoff comes from the queue's defaultJobOptions set by the relay.
     },
   );
+}
+
+/** Quarantine: keep the object for forensics, block it from the pipeline. */
+async function reject(db: Db, documentId: string, reason: string): Promise<void> {
+  await db.document.update({
+    where: { id: documentId },
+    data: { status: 'REJECTED', error: reason.slice(0, 500) },
+  });
+  await db.auditLog.create({
+    data: {
+      actorType: 'service',
+      actorId: 'worker:ingestion',
+      action: 'document.rejected',
+      entity: 'Document',
+      entityId: documentId,
+      data: { reason: reason.slice(0, 200) },
+      visibility: 'SUPER', // rejected uploads are a security signal
+    },
+  });
 }
 
 /** Fill only empty fields — never overwrite what a human already entered. */

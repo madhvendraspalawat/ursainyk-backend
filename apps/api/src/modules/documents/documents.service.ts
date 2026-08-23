@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { DocumentUploadRequest } from '@ursainyk/contracts';
+import { MAX_PDF_BYTES, MAX_PHOTO_BYTES } from '@ursainyk/parser';
 import { withGlobalScope, type Document } from '@ursainyk/db';
 import { scopeOf } from '@ursainyk/rbac';
 import { AuditService } from '../audit/audit.service';
@@ -54,6 +55,24 @@ export class DocumentsService {
       throw new BadRequestException(
         'object not found in storage — upload first',
       );
+    // First wall of the ingestion pipeline; deep validation runs in the worker.
+    const cap = doc.kind === 'RESUME_PDF' ? MAX_PDF_BYTES : MAX_PHOTO_BYTES;
+    if (size > cap) {
+      await this.prisma.db.document.update({
+        where: { id: doc.id },
+        data: { status: 'REJECTED', error: `oversize: ${size} > ${cap}` },
+      });
+      await this.audit.record({
+        actorType: 'user',
+        actorId: actor.userId,
+        action: 'document.rejected',
+        entity: 'Document',
+        entityId: doc.id,
+        data: { reason: 'oversize' },
+        visibility: 'SUPER',
+      });
+      throw new BadRequestException('file too large');
+    }
 
     const updated = await this.prisma.db.$transaction(async (tx) => {
       const row = await tx.document.update({
