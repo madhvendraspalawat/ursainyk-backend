@@ -4,6 +4,8 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
+process.env.DATABASE_URL = process.env.E2E_DATABASE_URL;
+
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 
