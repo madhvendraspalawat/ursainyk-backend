@@ -5,6 +5,7 @@ import { Queue } from 'bullmq';
 import { createPrismaClient } from '@ursainyk/db';
 import { NOTIFICATIONS_QUEUE, OutboxRelay, PARSER_QUEUE } from './outbox-relay';
 import { startParserWorker } from './parser-worker';
+import { scheduleCycles, startCyclesWorker } from './cycles-worker';
 import { startNotificationsWorker } from './notifications-worker';
 import { createRedis } from './redis';
 
@@ -19,6 +20,8 @@ async function main() {
   const relay = new OutboxRelay(db, { notifications: notificationsQueue, parser: parserQueue });
   const notifications = startNotificationsWorker(workerConnection, db);
   const parserWorker = startParserWorker(createRedis(), db);
+  const cyclesQueue = await scheduleCycles(createRedis());
+  const cyclesWorker = startCyclesWorker(createRedis(), db);
 
   relay.start();
   console.log('ursainyk-worker: outbox relay + notifications + parser workers running');
@@ -27,6 +30,8 @@ async function main() {
     await relay.stop();
     await notifications.close();
     await parserWorker.close();
+    await cyclesWorker.close();
+    await cyclesQueue.close();
     await notificationsQueue.close();
     await parserQueue.close();
     queueConnection.disconnect();

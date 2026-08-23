@@ -231,6 +231,43 @@ export class AuthService {
     });
   }
 
+  /** Redeem a single-use set-password link (invite or reset). Public + throttled. */
+  async passwordSet(token: string, newPassword: string): Promise<void> {
+    const row = await this.prisma.db.passwordSetToken.findUnique({
+      where: { tokenHash: sha256(token) },
+    });
+    if (!row || row.usedAt || row.expiresAt < new Date())
+      throw new UnauthorizedException('invalid or expired link');
+    await this.prisma.db.$transaction(async (tx) => {
+      await tx.passwordSetToken.update({
+        where: { id: row.id },
+        data: { usedAt: new Date() },
+      });
+      await tx.credential.upsert({
+        where: { userId: row.userId },
+        update: {
+          passwordHash: await argon2.hash(newPassword, {
+            type: argon2.argon2id,
+          }),
+        },
+        create: {
+          userId: row.userId,
+          passwordHash: await argon2.hash(newPassword, {
+            type: argon2.argon2id,
+          }),
+        },
+      });
+    });
+    await this.tokens.revokeAll(row.userId);
+    await this.audit.record({
+      actorType: 'user',
+      actorId: row.userId,
+      action: 'user.password_set',
+      entity: 'User',
+      entityId: row.userId,
+    });
+  }
+
   /** Self-service password change. Revokes every session — full re-login. */
   async passwordChange(
     userId: string,

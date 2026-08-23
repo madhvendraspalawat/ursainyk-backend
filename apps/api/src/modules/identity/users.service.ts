@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -9,6 +9,7 @@ import * as argon2 from 'argon2';
 import type { CreateUser } from '@ursainyk/contracts';
 import type { Role } from '@ursainyk/rbac';
 import { AuditService } from '../audit/audit.service';
+import { OutboxService } from '../notifications/outbox.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TokenService } from './token.service';
 import type { AuthUser } from './auth-user';
@@ -27,12 +28,39 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
     private readonly audit: AuditService,
+    private readonly outbox: OutboxService,
   ) {}
+
+  /**
+   * Production posture: when email can deliver, credentials never travel in
+   * HTTP responses — the user gets a single-use, expiring set-password link.
+   * Fallback (no SMTP / no email): temp password returned once, as before.
+   */
+  private inviteEnabled(): boolean {
+    return (
+      process.env.SMTP_DISABLED !== '1' && Boolean(process.env.PORTAL_BASE_URL)
+    );
+  }
+
+  private async issueSetPasswordLink(userId: string): Promise<void> {
+    const token = randomBytes(32).toString('base64url');
+    await this.prisma.db.passwordSetToken.create({
+      data: {
+        userId,
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        expiresAt: new Date(Date.now() + 48 * 3600 * 1000),
+      },
+    });
+    await this.outbox.emit('user.invited', {
+      userId,
+      link: `${process.env.PORTAL_BASE_URL}/set-password?token=${token}`,
+    });
+  }
 
   async createPortalUser(
     actor: AuthUser,
     input: CreateUser,
-  ): Promise<{ id: string; tempPassword: string }> {
+  ): Promise<{ id: string; tempPassword?: string; invited?: boolean }> {
     this.assertCreatableRoles(actor, input.roles);
     if (input.roles.includes('ESM_CENTRE') && !input.centreId)
       throw new BadRequestException('centreId required for ESM_CENTRE');
@@ -74,6 +102,10 @@ export class UsersService {
     });
     for (const role of input.roles)
       await this.auditGrant(actor, user.id, role, 'role.grant');
+    if (this.inviteEnabled()) {
+      await this.issueSetPasswordLink(user.id);
+      return { id: user.id, invited: true };
+    }
     return { id: user.id, tempPassword };
   }
 
@@ -119,10 +151,23 @@ export class UsersService {
   async resetPassword(
     actor: AuthUser,
     userId: string,
-  ): Promise<{ tempPassword: string }> {
+  ): Promise<{ tempPassword?: string; invited?: boolean }> {
     const user = await this.mustExist(userId);
     if (user.kind !== 'PORTAL')
       throw new BadRequestException('candidates have no password');
+    if (this.inviteEnabled() && user.email) {
+      await this.tokens.revokeAll(userId);
+      await this.issueSetPasswordLink(userId);
+      await this.audit.record({
+        actorType: 'user',
+        actorId: actor.userId,
+        action: 'user.password_reset',
+        entity: 'User',
+        entityId: userId,
+        data: { via: 'invite_link' },
+      });
+      return { invited: true };
+    }
     const tempPassword = randomBytes(9).toString('base64url');
     await this.prisma.db.credential.update({
       where: { userId },

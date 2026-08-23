@@ -36,6 +36,12 @@ export const RefreshSchema = z.object({
 });
 export type Refresh = z.infer<typeof RefreshSchema>;
 
+export const PasswordSetSchema = z.object({
+  token: z.string().min(32).max(200),
+  newPassword: z.string().min(10).max(128),
+});
+export type PasswordSet = z.infer<typeof PasswordSetSchema>;
+
 export const TokenPairSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),

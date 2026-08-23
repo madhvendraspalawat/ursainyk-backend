@@ -122,6 +122,20 @@ test('user accounts: creators are ESM Mgr/Sales/Super; role grants Super only', 
   assert.equal(can(['OPS'], 'user_account', 'create'), false);
 });
 
+test('analytics: all six admin roles, nobody external', () => {
+  const readers = ROLES.filter((r) => can([r], 'analytics', 'read'));
+  assert.deepEqual(readers, [
+    'REVIEWER',
+    'OPS',
+    'FINANCE',
+    'ESM_MANAGER',
+    'SALES_BD',
+    'SUPER_ADMIN',
+  ]);
+  assert.equal(can(['ESM_CENTRE'], 'analytics', 'read'), false);
+  assert.equal(can(['CONTRACTOR'], 'analytics', 'read'), false);
+});
+
 test('training data (ADR-0012): Super Admin only, export and erasure', () => {
   const readers = ROLES.filter((r) => can([r], 'training_data', 'read'));
   assert.deepEqual(readers, ['SUPER_ADMIN']);

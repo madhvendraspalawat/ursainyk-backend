@@ -26,4 +26,11 @@ export class VerificationController {
     const { period } = VerificationDueQuerySchema.parse(query);
     return this.verification.due(actor, period);
   }
+
+  @Get('winback')
+  @Require('verification:create')
+  winback(@Query() query: unknown, @CurrentUser() actor: AuthUser) {
+    const { period } = VerificationDueQuerySchema.parse(query);
+    return this.verification.winback(actor, period);
+  }
 }

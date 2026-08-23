@@ -13,8 +13,10 @@ import {
   EraseSubjectSchema,
 } from '@ursainyk/contracts';
 import type { Prisma } from '@ursainyk/db';
+import { z } from 'zod';
 import { CurrentUser, type AuthUser } from '../identity/auth-user';
 import { Require } from '../identity/require.decorator';
+import { AnomaliesService } from './anomalies.service';
 import { DecisionService } from './decision.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -28,7 +30,18 @@ export class AuditController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly decisions: DecisionService,
+    private readonly anomalies: AnomaliesService,
   ) {}
+
+  /** ADR-0006 anomaly views. maskReadPatterns section: Super Admin callers only. */
+  @Get('anomalies')
+  @Require('audit_log:read')
+  anomalyOverview(@Query() query: unknown, @CurrentUser() user: AuthUser) {
+    const { days } = z
+      .object({ days: z.coerce.number().int().min(1).max(365).default(30) })
+      .parse(query);
+    return this.anomalies.overview(user, days);
+  }
 
   @Get('logs')
   @Require('audit_log:read')

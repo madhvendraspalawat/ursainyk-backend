@@ -133,6 +133,9 @@ async function main() {
     { key: 'candidate.rejected', channel: 'SMS', locale: 'en', body: 'Hi {{name}}, your profile needs changes. Visit your nearest centre for help.' },
     { key: 'placement.joined', channel: 'SMS', locale: 'en', body: 'Congratulations {{name}}! Your joining is confirmed. All the best!' },
     { key: 'candidate.approved', channel: 'EMAIL', locale: 'en', subject: 'Profile approved', body: 'Hi {{name}},\n\nYour profile was approved. Score: {{score}}.\n\n— Ursainyk' },
+    { key: 'verification.reminder', channel: 'EMAIL', locale: 'en', subject: 'Monthly verification due — {{period}}', body: 'Hi {{name}},\n\n{{count}} placed candidates at {{centre}} still need their {{period}} verification. Please complete them in the portal.\n\n— Ursainyk' },
+    { key: 'retention.winback', channel: 'EMAIL', locale: 'en', subject: 'Win-back list — {{period}}', body: 'Hi {{name}},\n\n{{count}} candidates from {{centre}} left in {{period}}. See the win-back list in the portal — a call may bring them back.\n\n— Ursainyk' },
+    { key: 'user.invited', channel: 'EMAIL', locale: 'en', subject: 'Set up your Ursainyk account', body: 'Hi {{name}},\n\nAn account was created for you. Set your password here (link valid 48h, single use):\n{{link}}\n\n— Ursainyk' },
   ];
   for (const t of templates) {
     await db.notificationTemplate.upsert({

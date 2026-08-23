@@ -73,6 +73,8 @@ pnpm dev                    # API on :3000
 pnpm --filter @ursainyk/worker start:dev   # outbox relay + notifications
 ```
 
+Production posture: set `ADMIN_MFA_ENFORCE=1`, provision the app DB role with `scripts/provision-db-role.sql` (NOSUPERUSER — RLS is bypassed otherwise), configure `PORTAL_BASE_URL` + SMTP so credentials travel as single-use links, and set `SECURITY_ALERT_EMAIL` for the daily audit-chain check.
+
 Gates: `pnpm typecheck · lint · build · test` (CI runs all four).
 
 ### Dev users (synthetic, from seed)

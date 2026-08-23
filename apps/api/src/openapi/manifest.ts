@@ -93,6 +93,14 @@ export const ENDPOINTS: EndpointSpec[] = [
     summary: 'Prove TOTP possession — enforced at next login',
     body: c.TotpActivateSchema,
   },
+  {
+    method: 'post',
+    path: '/auth/password/set',
+    tag: 'auth',
+    summary: 'Redeem single-use set-password link (invite/reset)',
+    public: true,
+    body: c.PasswordSetSchema,
+  },
   // ── User management ───────────────────────────────────────────────────────
   {
     method: 'post',
@@ -346,6 +354,14 @@ export const ENDPOINTS: EndpointSpec[] = [
     permission: 'verification:create',
     query: c.VerificationDueQuerySchema,
   },
+  {
+    method: 'get',
+    path: '/verifications/winback',
+    tag: 'verification',
+    summary: 'Retention list: LEFT in period, not since won back',
+    permission: 'verification:create',
+    query: c.VerificationDueQuerySchema,
+  },
   // ── Scoring ───────────────────────────────────────────────────────────────
   {
     method: 'get',
@@ -517,7 +533,23 @@ export const ENDPOINTS: EndpointSpec[] = [
     permission: 'system_config:configure',
     body: c.ConfigPutSchema,
   },
+  {
+    method: 'get',
+    path: '/analytics/overview',
+    tag: 'admin',
+    summary:
+      'Territory rollups: candidates, pipeline, demand, verification, money',
+    permission: 'analytics:read',
+  },
   // ── Audit ─────────────────────────────────────────────────────────────────
+  {
+    method: 'get',
+    path: '/audit/anomalies',
+    tag: 'audit',
+    summary:
+      'Anomaly views: verification spikes (+ mask-read patterns for Super Admin)',
+    permission: 'audit_log:read',
+  },
   {
     method: 'get',
     path: '/audit/logs',
