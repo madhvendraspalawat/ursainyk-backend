@@ -12,3 +12,5 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
   msgpackr-extract: true
+  '@google/genai': true
+  protobufjs: true

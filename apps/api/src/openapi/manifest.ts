@@ -1,0 +1,552 @@
+/**
+ * The endpoint manifest — the single source the OpenAPI export renders.
+ * Request shapes come straight from @ursainyk/contracts (zod v4 → JSON Schema),
+ * so the contract can never drift from what the controllers actually parse.
+ * `permission` mirrors the @Require() on the route (informational for the
+ * frontend: which role sees which surface).
+ */
+import { z, type ZodType } from 'zod';
+import * as c from '@ursainyk/contracts';
+
+export interface EndpointSpec {
+  method: 'get' | 'post' | 'patch' | 'put' | 'delete';
+  path: string;
+  tag: string;
+  summary: string;
+  public?: boolean;
+  permission?: string;
+  body?: ZodType;
+  query?: ZodType;
+  response?: ZodType;
+  responseDescription?: string;
+}
+
+const uuidParam = (name: string) => ({ name, schema: z.string().uuid() });
+void uuidParam; // path params are rendered generically from {placeholders}
+
+export const ENDPOINTS: EndpointSpec[] = [
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/auth/otp/request',
+    tag: 'auth',
+    summary: 'Request candidate OTP (auto-registers unknown phones)',
+    public: true,
+    body: c.OtpRequestSchema,
+  },
+  {
+    method: 'post',
+    path: '/auth/otp/verify',
+    tag: 'auth',
+    summary: 'Verify OTP → token pair',
+    public: true,
+    body: c.OtpVerifySchema,
+    response: c.TokenPairSchema,
+  },
+  {
+    method: 'post',
+    path: '/auth/login',
+    tag: 'auth',
+    summary: 'Portal login (TOTP required for enrolled admins)',
+    public: true,
+    body: c.PasswordLoginSchema,
+    response: c.TokenPairSchema,
+  },
+  {
+    method: 'post',
+    path: '/auth/refresh',
+    tag: 'auth',
+    summary: 'Rotate refresh token (reuse revokes the family)',
+    public: true,
+    body: c.RefreshSchema,
+    response: c.TokenPairSchema,
+  },
+  {
+    method: 'post',
+    path: '/auth/logout',
+    tag: 'auth',
+    summary: 'Revoke all refresh tokens',
+  },
+  {
+    method: 'get',
+    path: '/auth/me',
+    tag: 'auth',
+    summary: 'Current principal (roles, territories, orgs)',
+  },
+  {
+    method: 'post',
+    path: '/auth/password/change',
+    tag: 'auth',
+    summary: 'Change own password (revokes all sessions)',
+    body: c.PasswordChangeSchema,
+  },
+  {
+    method: 'post',
+    path: '/auth/totp/enroll',
+    tag: 'auth',
+    summary: 'Start TOTP enrollment → otpauth URI',
+  },
+  {
+    method: 'post',
+    path: '/auth/totp/activate',
+    tag: 'auth',
+    summary: 'Prove TOTP possession — enforced at next login',
+    body: c.TotpActivateSchema,
+  },
+  // ── User management ───────────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/identity/users',
+    tag: 'identity',
+    summary: 'Create portal user (temp password returned once)',
+    permission: 'user_account:create',
+    body: c.CreateUserSchema,
+  },
+  {
+    method: 'post',
+    path: '/identity/users/{id}/roles',
+    tag: 'identity',
+    summary: 'Grant role',
+    permission: 'user_account:configure',
+    body: c.GrantRoleSchema,
+  },
+  {
+    method: 'delete',
+    path: '/identity/users/{id}/roles/{role}',
+    tag: 'identity',
+    summary: 'Revoke role (revokes sessions)',
+    permission: 'user_account:configure',
+  },
+  {
+    method: 'patch',
+    path: '/identity/users/{id}/status',
+    tag: 'identity',
+    summary: 'Enable/disable user (disable = forced logout)',
+    permission: 'user_account:update',
+    body: c.UpdateUserStatusSchema,
+  },
+  {
+    method: 'post',
+    path: '/identity/users/{id}/reset-password',
+    tag: 'identity',
+    summary: 'Admin password reset (temp password returned once)',
+    permission: 'user_account:update',
+  },
+  // ── Candidates ────────────────────────────────────────────────────────────
+  {
+    method: 'get',
+    path: '/candidates/me',
+    tag: 'candidates',
+    summary: 'Own profile (lazily created as DRAFT)',
+    permission: 'candidate_profile:read',
+  },
+  {
+    method: 'patch',
+    path: '/candidates/me',
+    tag: 'candidates',
+    summary: 'Update own draft profile',
+    permission: 'candidate_profile:update',
+    body: c.CandidateSelfUpdateSchema,
+  },
+  {
+    method: 'post',
+    path: '/candidates/me/submit',
+    tag: 'candidates',
+    summary: 'Submit for review',
+    permission: 'candidate_profile:update',
+  },
+  {
+    method: 'post',
+    path: '/candidates',
+    tag: 'candidates',
+    summary: 'ESM walk-in intake (territory-fenced)',
+    permission: 'candidate_profile:create',
+    body: c.WalkInCandidateSchema,
+  },
+  {
+    method: 'get',
+    path: '/candidates',
+    tag: 'candidates',
+    summary: 'List (ESM: territory; admin: all)',
+    permission: 'candidate_profile:read',
+    query: c.CandidateListQuerySchema,
+  },
+  {
+    method: 'get',
+    path: '/candidates/{id}',
+    tag: 'candidates',
+    summary: 'Detail (scope-fenced)',
+    permission: 'candidate_profile:read',
+  },
+  // ── Review gate ───────────────────────────────────────────────────────────
+  {
+    method: 'get',
+    path: '/review/queue',
+    tag: 'review',
+    summary: 'Pending-review queue, oldest first',
+    permission: 'candidate_profile:approve',
+    query: c.ReviewQueueQuerySchema,
+  },
+  {
+    method: 'post',
+    path: '/review/{id}/approve',
+    tag: 'review',
+    summary:
+      'Approve with optional corrections (auto-scores; training capture)',
+    permission: 'candidate_profile:approve',
+    body: c.ReviewApproveSchema,
+  },
+  {
+    method: 'post',
+    path: '/review/{id}/reject',
+    tag: 'review',
+    summary: 'Reject with rationale',
+    permission: 'candidate_profile:approve',
+    body: c.ReviewRejectSchema,
+  },
+  // ── Documents / parser ────────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/documents/uploads',
+    tag: 'documents',
+    summary: 'Presigned upload URL (résumé photo/PDF)',
+    permission: 'candidate_profile:update',
+    body: c.DocumentUploadRequestSchema,
+  },
+  {
+    method: 'post',
+    path: '/documents/{id}/confirm',
+    tag: 'documents',
+    summary: 'Confirm upload → ingestion pipeline (validate, scan, parse)',
+    permission: 'candidate_profile:update',
+  },
+  {
+    method: 'get',
+    path: '/documents/{id}',
+    tag: 'documents',
+    summary: 'Document + presigned download (attachment-only)',
+    permission: 'candidate_profile:read',
+  },
+  // ── Requirements ──────────────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/requirements',
+    tag: 'requirements',
+    summary: 'Post requirement (contractor own org; Sales on behalf)',
+    permission: 'requirement:create',
+    body: c.RequirementCreateSchema,
+  },
+  {
+    method: 'get',
+    path: '/requirements',
+    tag: 'requirements',
+    summary: 'List: contractor=own, ESM=masked territory feed, admin=all',
+    permission: 'requirement:read',
+    query: c.RequirementListQuerySchema,
+  },
+  {
+    method: 'get',
+    path: '/requirements/{id}',
+    tag: 'requirements',
+    summary: 'Detail (masked for ESM)',
+    permission: 'requirement:read',
+  },
+  {
+    method: 'patch',
+    path: '/requirements/{id}',
+    tag: 'requirements',
+    summary: 'Edit / close lifecycle',
+    permission: 'requirement:update',
+    body: c.RequirementUpdateSchema,
+  },
+  {
+    method: 'get',
+    path: '/requirements/{id}/employer',
+    tag: 'requirements',
+    summary: 'Unmask employer identity (audited, ADR-0006)',
+    permission: 'employer_identity:read',
+  },
+  // ── Placements / pipeline ─────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/placements',
+    tag: 'placements',
+    summary: 'Create placement (APPROVED candidate × OPEN requirement)',
+    permission: 'placement:create',
+    body: c.PlacementCreateSchema,
+  },
+  {
+    method: 'patch',
+    path: '/placements/{id}/stage',
+    tag: 'placements',
+    summary: 'Advance pipeline (forward-only; JOINED stamps joinedAt)',
+    permission: 'placement:update',
+    body: c.PlacementStageSchema,
+  },
+  {
+    method: 'get',
+    path: '/placements',
+    tag: 'placements',
+    summary: 'List (ESM territory / contractor supplied / candidate own)',
+    permission: 'placement:read',
+    query: c.PlacementListQuerySchema,
+  },
+  // ── Matching ──────────────────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/matching/suggestions',
+    tag: 'matching',
+    summary: 'Ops suggests candidate×requirement (training capture)',
+    permission: 'match_suggestion:create',
+    body: c.SuggestionCreateSchema,
+  },
+  {
+    method: 'get',
+    path: '/matching/suggestions',
+    tag: 'matching',
+    summary: 'List suggestions',
+    permission: 'match_suggestion:read',
+    query: c.SuggestionListQuerySchema,
+  },
+  {
+    method: 'post',
+    path: '/matching/suggestions/{id}/accept',
+    tag: 'matching',
+    summary: 'ESM accepts → placement',
+    permission: 'match_suggestion:update',
+  },
+  {
+    method: 'post',
+    path: '/matching/suggestions/{id}/dismiss',
+    tag: 'matching',
+    summary: 'ESM dismisses',
+    permission: 'match_suggestion:update',
+  },
+  {
+    method: 'get',
+    path: '/matching/overview',
+    tag: 'matching',
+    summary: 'Demand vs supply by territory',
+    permission: 'match_suggestion:create',
+  },
+  // ── Verification ──────────────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/verifications',
+    tag: 'verification',
+    summary: 'Submit immutable monthly fact (drives all money)',
+    permission: 'verification:create',
+    body: c.VerificationCreateSchema,
+  },
+  {
+    method: 'get',
+    path: '/verifications/due',
+    tag: 'verification',
+    summary: 'JOINED placements missing this period',
+    permission: 'verification:create',
+    query: c.VerificationDueQuerySchema,
+  },
+  // ── Scoring ───────────────────────────────────────────────────────────────
+  {
+    method: 'get',
+    path: '/scoring/presets',
+    tag: 'scoring',
+    summary: 'List presets (versioned, recomputable)',
+    permission: 'candidate_score:configure',
+  },
+  {
+    method: 'put',
+    path: '/scoring/presets',
+    tag: 'scoring',
+    summary: 'New active preset',
+    permission: 'candidate_score:configure',
+    body: c.ScoringPresetPutSchema,
+  },
+  {
+    method: 'post',
+    path: '/scoring/candidates/{id}/override',
+    tag: 'scoring',
+    summary: 'Manual score override (training capture)',
+    permission: 'candidate_score:configure',
+    body: c.ScoreOverrideSchema,
+  },
+  // ── Billing / payouts ─────────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/billing/runs',
+    tag: 'billing',
+    summary: 'Run billing for a period (idempotent, append-only ledger)',
+    permission: 'invoice:create',
+    body: c.BillingRunSchema,
+  },
+  {
+    method: 'get',
+    path: '/billing/invoices',
+    tag: 'billing',
+    summary: 'Invoice projections (contractor: own org)',
+    permission: 'invoice:read',
+    query: c.LedgerQuerySchema,
+  },
+  {
+    method: 'get',
+    path: '/payouts',
+    tag: 'billing',
+    summary: 'Payout projections (ESM: own centres)',
+    permission: 'payout:read',
+    query: c.LedgerQuerySchema,
+  },
+  // ── Admin: centres / orgs ─────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/centres',
+    tag: 'admin',
+    summary: 'Create ESM centre',
+    permission: 'esm_centre:create',
+    body: c.CentreCreateSchema,
+  },
+  {
+    method: 'get',
+    path: '/centres',
+    tag: 'admin',
+    summary: 'List centres + territories',
+    permission: 'esm_centre:read',
+  },
+  {
+    method: 'patch',
+    path: '/centres/{id}',
+    tag: 'admin',
+    summary: 'Activate/deactivate centre',
+    permission: 'esm_centre:update',
+    body: c.CentrePatchSchema,
+  },
+  {
+    method: 'post',
+    path: '/centres/{id}/territories/{territoryId}',
+    tag: 'admin',
+    summary: 'Assign territory (redraws RLS perimeter; audited)',
+    permission: 'territory:update',
+  },
+  {
+    method: 'delete',
+    path: '/centres/{id}/territories/{territoryId}',
+    tag: 'admin',
+    summary: 'Unassign territory',
+    permission: 'territory:update',
+  },
+  {
+    method: 'get',
+    path: '/centres/{id}/summary',
+    tag: 'admin',
+    summary: 'Centre performance snapshot',
+    permission: 'esm_centre:read',
+  },
+  {
+    method: 'post',
+    path: '/contractor-orgs',
+    tag: 'admin',
+    summary: 'Contractor org intake',
+    permission: 'contractor_org:create',
+    body: c.OrgCreateSchema,
+  },
+  {
+    method: 'get',
+    path: '/contractor-orgs',
+    tag: 'admin',
+    summary: 'List orgs (identity excluded — masked table)',
+    permission: 'contractor_org:read',
+  },
+  {
+    method: 'patch',
+    path: '/contractor-orgs/{id}',
+    tag: 'admin',
+    summary: 'Edit org',
+    permission: 'contractor_org:update',
+    body: c.OrgPatchSchema,
+  },
+  {
+    method: 'put',
+    path: '/contractor-orgs/{id}/employer',
+    tag: 'admin',
+    summary: 'Upsert employer identity (the masked join)',
+    permission: 'contractor_org:update',
+    body: c.EmployerIdentityPutSchema,
+  },
+  // ── Config (Super Admin) ──────────────────────────────────────────────────
+  {
+    method: 'post',
+    path: '/territories',
+    tag: 'config',
+    summary: 'Define territory',
+    permission: 'territory:create',
+    body: c.TerritoryCreateSchema,
+  },
+  {
+    method: 'get',
+    path: '/territories',
+    tag: 'config',
+    summary: 'List territories',
+    permission: 'territory:read',
+  },
+  {
+    method: 'patch',
+    path: '/territories/{id}',
+    tag: 'config',
+    summary: 'Edit territory',
+    permission: 'territory:update',
+    body: c.TerritoryPatchSchema,
+  },
+  {
+    method: 'get',
+    path: '/config',
+    tag: 'config',
+    summary: 'List system config',
+    permission: 'system_config:read',
+  },
+  {
+    method: 'get',
+    path: '/config/{key}',
+    tag: 'config',
+    summary: 'Read config key',
+    permission: 'system_config:read',
+  },
+  {
+    method: 'put',
+    path: '/config/{key}',
+    tag: 'config',
+    summary: 'Write config key (flags = flags.*; audited SUPER)',
+    permission: 'system_config:configure',
+    body: c.ConfigPutSchema,
+  },
+  // ── Audit ─────────────────────────────────────────────────────────────────
+  {
+    method: 'get',
+    path: '/audit/logs',
+    tag: 'audit',
+    summary: 'Audit log (two-tier visibility)',
+    permission: 'audit_log:read',
+    query: c.AuditLogQuerySchema,
+  },
+  {
+    method: 'get',
+    path: '/audit/chain/verify',
+    tag: 'audit',
+    summary: 'Walk the hash chain',
+    permission: 'training_data:configure',
+  },
+  {
+    method: 'get',
+    path: '/audit/decisions/export',
+    tag: 'audit',
+    summary: 'Training-data export (NDJSON, pseudonymized)',
+    permission: 'training_data:read',
+    query: c.DecisionExportQuerySchema,
+  },
+  {
+    method: 'post',
+    path: '/audit/decisions/erase',
+    tag: 'audit',
+    summary: 'DPDP erasure of a subject',
+    permission: 'training_data:configure',
+    body: c.EraseSubjectSchema,
+  },
+];

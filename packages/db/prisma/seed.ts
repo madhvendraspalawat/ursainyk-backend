@@ -125,6 +125,23 @@ async function main() {
     },
   });
 
+  // Notification templates (multilingual, versioned — ADR-0010). Synthetic copy.
+  const templates: Array<{ key: string; channel: 'SMS' | 'EMAIL'; locale: string; subject?: string; body: string }> = [
+    { key: 'candidate.approved', channel: 'SMS', locale: 'en', body: 'Hi {{name}}, your Ursainyk profile is approved. Your score: {{score}}.' },
+    { key: 'candidate.approved', channel: 'SMS', locale: 'hi', body: 'नमस्ते {{name}}, आपकी Ursainyk प्रोफ़ाइल स्वीकृत हो गई है। स्कोर: {{score}}।' },
+    { key: 'candidate.approved', channel: 'SMS', locale: 'kn', body: 'ನಮಸ್ಕಾರ {{name}}, ನಿಮ್ಮ Ursainyk ಪ್ರೊಫೈಲ್ ಅನುಮೋದನೆಯಾಗಿದೆ. ಸ್ಕೋರ್: {{score}}.' },
+    { key: 'candidate.rejected', channel: 'SMS', locale: 'en', body: 'Hi {{name}}, your profile needs changes. Visit your nearest centre for help.' },
+    { key: 'placement.joined', channel: 'SMS', locale: 'en', body: 'Congratulations {{name}}! Your joining is confirmed. All the best!' },
+    { key: 'candidate.approved', channel: 'EMAIL', locale: 'en', subject: 'Profile approved', body: 'Hi {{name}},\n\nYour profile was approved. Score: {{score}}.\n\n— Ursainyk' },
+  ];
+  for (const t of templates) {
+    await db.notificationTemplate.upsert({
+      where: { key_channel_locale_version: { key: t.key, channel: t.channel, locale: t.locale, version: 1 } },
+      update: {},
+      create: { ...t, version: 1 },
+    });
+  }
+
   console.log(`Seeded: 1 candidate (+911234500000), ${PORTAL_USERS.length} portal users (password: ${DEV_PASSWORD})`);
   await db.$disconnect();
 }

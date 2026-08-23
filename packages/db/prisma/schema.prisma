@@ -47,6 +47,8 @@ model User {
   /// Login identifier for PORTAL kind.
   email  String?    @unique
   name   String
+  /// Notification/UI language: kn | hi | en (launch set).
+  locale String     @default("en")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -297,9 +299,45 @@ model Candidate {
 
   suggestions MatchSuggestion[]
   placements  Placement[]
+  documents   Document[]
 
   @@index([territoryId, status])
   @@index([phone])
+}
+
+// ── Documents (résumé uploads → parser pipeline, ADR-0008) ──────────────────
+
+enum DocumentKind {
+  RESUME_PHOTO
+  RESUME_PDF
+}
+
+enum DocumentStatus {
+  PENDING_UPLOAD // presigned URL issued, upload not confirmed
+  UPLOADED // confirmed — ingestion pipeline queued via outbox
+  PARSED
+  FAILED // parser errored (retryable class)
+  REJECTED // failed ingestion validation: wrong bytes, threats, malware, oversize
+}
+
+/// Résumé artifacts in S3 (MinIO locally). Access is scoped through the
+/// owning candidate (own / territory / admin) — never by raw key.
+model Document {
+  id           String         @id @default(uuid(7))
+  candidateId  String
+  candidate    Candidate      @relation(fields: [candidateId], references: [id])
+  kind         DocumentKind
+  s3Key        String         @unique
+  mime         String
+  sizeBytes    Int?
+  status       DocumentStatus @default(PENDING_UPLOAD)
+  uploadedById String?
+  /// Parser failure reason (truncated) — never raw provider payloads.
+  error        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([candidateId, status])
 }
 
 // ── Requirements & employer masking (Contractor / Sales BD; ADR-0006/0007) ──
@@ -473,6 +511,35 @@ model SystemConfig {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+// ── Notification templates (ADR-0010: multilingual, versioned, DB-stored) ───
+
+enum NotificationChannel {
+  SMS
+  WHATSAPP
+  EMAIL
+  PUSH
+}
+
+/// Editable without a release. Rendering picks the highest active version for
+/// (key, channel, locale), falling back to locale 'en'.
+model NotificationTemplate {
+  id        String              @id @default(uuid(7))
+  /// Outbox event key, e.g. 'candidate.approved'.
+  key       String
+  channel   NotificationChannel
+  /// kn | hi | en
+  locale    String
+  version   Int                 @default(1)
+  subject   String?
+  /// Body with {{placeholders}}.
+  body      String
+  active    Boolean             @default(true)
+  updatedAt DateTime            @updatedAt
+
+  @@unique([key, channel, locale, version])
+  @@index([key, active])
 }
 
 // ── Transactional outbox (ADR-0010) ─────────────────────────────────────────

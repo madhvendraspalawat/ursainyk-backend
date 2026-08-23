@@ -27,4 +27,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
-      # TODO: prisma migrate diff --exit-code against a service container; openapi:export + drift check
+      # Contract drift: the committed openapi.json must match the manifest.
+      - run: pnpm openapi:export && git diff --exit-code openapi/openapi.json
+      # TODO: prisma migrate diff --exit-code against a service container

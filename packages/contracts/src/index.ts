@@ -7,3 +7,4 @@ export * from './review';
 export * from './requirements';
 export * from './placements';
 export * from './billing';
+export * from './documents';

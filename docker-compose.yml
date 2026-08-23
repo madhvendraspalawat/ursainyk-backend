@@ -19,6 +19,10 @@ services:
       MINIO_ROOT_PASSWORD: minio12345
     ports: ["9000:9000", "9001:9001"]
     volumes: ["miniodata:/data"]
+  clamav: # optional antivirus for the ingestion pipeline: docker compose --profile av up -d
+    image: clamav/clamav:stable
+    profiles: ["av"]
+    ports: ["3310:3310"]
   mailpit:
     image: axllent/mailpit
     ports: ["8025:8025", "1025:1025"]
