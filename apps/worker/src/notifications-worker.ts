@@ -25,12 +25,13 @@ export function startNotificationsWorker(connection: IORedis, db: Db): Worker<Ou
   return new Worker<OutboxJob>(
     NOTIFICATIONS_QUEUE,
     async (job: Job<OutboxJob>) => {
-      const recipient = await resolveRecipient(db, job.data);
-      if (!recipient) {
+      const recipients = await resolveRecipients(db, job.data);
+      if (recipients.length === 0) {
         console.log(`[notifications] event=${job.data.eventType} outboxId=${job.data.outboxId} (no end-user recipient)`);
         return;
       }
-      for (const sender of senders) {
+      for (const recipient of recipients)
+        for (const sender of senders) {
         const to = sender.channel === 'EMAIL' ? recipient.email : recipient.phone;
         if (!to) continue;
         const rendered = await renderTemplate(db, job.data.eventType, sender.channel, recipient.locale, recipient.vars);
@@ -54,8 +55,55 @@ interface Recipient {
   vars: Record<string, string>;
 }
 
-/** Event → end-user recipient. Events without one (billing, documents) return null. */
-async function resolveRecipient(db: Db, job: OutboxJob): Promise<Recipient | null> {
+/** Event → recipients. Events without any (billing, documents) return []. */
+async function resolveRecipients(db: Db, job: OutboxJob): Promise<Recipient[]> {
+  // Centre-targeted operational digests → every portal member of the centre.
+  if (['verification.reminder', 'retention.winback'].includes(job.eventType)) {
+    const p = job.payload as {
+      centreId: string;
+      period: string;
+      dueCount?: number;
+      count?: number;
+    };
+    const members = await db.centreMembership.findMany({
+      where: { centreId: p.centreId },
+      include: { user: true, centre: true },
+    });
+    return members
+      .filter((m) => m.user.email)
+      .map((m) => ({
+        phone: m.user.phone,
+        email: m.user.email,
+        locale: m.user.locale,
+        vars: {
+          name: m.user.name,
+          centre: m.centre.name,
+          period: p.period,
+          count: String(p.dueCount ?? p.count ?? 0),
+        },
+      }));
+  }
+  if (job.eventType === 'user.invited') {
+    const p = job.payload as { userId: string; link: string };
+    const user = await db.user.findUnique({ where: { id: p.userId } });
+    if (!user?.email) return [];
+    return [
+      {
+        phone: null, // credentials links go over email only
+        email: user.email,
+        locale: user.locale,
+        vars: { name: user.name, link: p.link },
+      },
+    ];
+  }
+  const single = await resolveCandidateRecipient(db, job);
+  return single ? [single] : [];
+}
+
+async function resolveCandidateRecipient(
+  db: Db,
+  job: OutboxJob,
+): Promise<Recipient | null> {
   const payload = job.payload as { candidateId?: string; placementId?: string };
   let candidateId = payload.candidateId ?? null;
   if (!candidateId && payload.placementId && job.eventType === 'placement.joined') {

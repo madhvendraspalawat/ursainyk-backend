@@ -33,6 +33,7 @@ export const RESOURCES = [
   'match_suggestion', // Ops proposes; ESM accepts/dismisses (Phase 1 manual-assisted matching)
   'user_account', // portal/candidate account lifecycle; 'configure' = role grant/revoke
   'system_config', // RBAC grants, feature flags, languages, pricing/billing rules
+  'analytics', // admin console dashboards (read-only rollups)
   'audit_log', // two-tier: admin sub-roles see ADMIN-visibility rows; SUPER rows are Super Admin only (ADR-0012)
   'training_data', // DecisionEvent exports for in-house AI training (ADR-0012)
   'employer_identity', // the masked join (ADR-0007); reads are audit-logged (ADR-0006)
@@ -85,6 +86,7 @@ export const MATRIX: Record<Role, Partial<Record<Resource, Grant>>> = {
   REVIEWER: {
     candidate_profile: { actions: ['read', 'update', 'approve'], scope: 'all' },
     candidate_score: { actions: ['read'], scope: 'all' },
+    analytics: { actions: ['read'], scope: 'all' },
     audit_log: { actions: ['read'], scope: 'all' }, // ADMIN tier only (ADR-0012)
   },
   OPS: {
@@ -94,6 +96,7 @@ export const MATRIX: Record<Role, Partial<Record<Resource, Grant>>> = {
     placement: { actions: ['read'], scope: 'all' },
     esm_centre: { actions: ['read'], scope: 'all' }, // entity management (task 34)
     match_suggestion: { actions: [...CRU], scope: 'all' }, // manual-assisted matching
+    analytics: { actions: ['read'], scope: 'all' },
     audit_log: { actions: ['read'], scope: 'all' }, // ADMIN tier only (ADR-0012)
   },
   FINANCE: {
@@ -101,6 +104,7 @@ export const MATRIX: Record<Role, Partial<Record<Resource, Grant>>> = {
     verification: { actions: ['read'], scope: 'all' },
     invoice: { actions: CRU, scope: 'all' },
     payout: { actions: CRU, scope: 'all' },
+    analytics: { actions: ['read'], scope: 'all' },
     audit_log: { actions: ['read'], scope: 'all' }, // ADMIN tier only (ADR-0012)
   },
   ESM_MANAGER: {
@@ -109,12 +113,14 @@ export const MATRIX: Record<Role, Partial<Record<Resource, Grant>>> = {
     territory: { actions: ['update'], scope: 'all' }, // assign centre territories
     placement: { actions: ['read'], scope: 'all' }, // performance monitoring
     verification: { actions: ['read'], scope: 'all' },
+    analytics: { actions: ['read'], scope: 'all' },
     audit_log: { actions: ['read'], scope: 'all' }, // ADMIN tier only (ADR-0012)
   },
   SALES_BD: {
     contractor_org: { actions: CRU, scope: 'all' }, // contractor intake
     user_account: { actions: ['create'], scope: 'all' }, // contractor user accounts only (service enforces role=CONTRACTOR)
     requirement: { actions: CRU, scope: 'all' }, // on contractors' behalf
+    analytics: { actions: ['read'], scope: 'all' },
     audit_log: { actions: ['read'], scope: 'all' }, // ADMIN tier only (ADR-0012)
   },
   SUPER_ADMIN: {
@@ -131,6 +137,7 @@ export const MATRIX: Record<Role, Partial<Record<Resource, Grant>>> = {
     match_suggestion: { actions: ['read'], scope: 'all' },
     user_account: { actions: [...CRU, 'configure'], scope: 'all' }, // full lifecycle + role grants
     system_config: { actions: [...CRU, 'configure'], scope: 'all' },
+    analytics: { actions: ['read'], scope: 'all' },
     audit_log: { actions: ['read'], scope: 'all' }, // both tiers incl. service/worker rows
     training_data: { actions: ['read', 'configure'], scope: 'all' }, // exports + erasure (ADR-0012)
     employer_identity: { actions: ['read'], scope: 'all' }, // audit-logged like any read

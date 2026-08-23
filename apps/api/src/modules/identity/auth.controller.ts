@@ -5,6 +5,7 @@ import {
   OtpVerifySchema,
   PasswordLoginSchema,
   PasswordChangeSchema,
+  PasswordSetSchema,
   RefreshSchema,
   TotpActivateSchema,
 } from '@ursainyk/contracts';
@@ -55,6 +56,15 @@ export class AuthController {
   refresh(@Body() body: unknown) {
     const { refreshToken } = RefreshSchema.parse(body);
     return this.auth.refresh(refreshToken);
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('password/set')
+  @HttpCode(204)
+  async passwordSet(@Body() body: unknown) {
+    const { token, newPassword } = PasswordSetSchema.parse(body);
+    await this.auth.passwordSet(token, newPassword);
   }
 
   @Post('password/change')

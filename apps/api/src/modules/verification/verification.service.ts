@@ -90,6 +90,44 @@ export class VerificationService {
     return created;
   }
 
+  /** Retention list ("these N left — call them"): LEFT in `period`, not since won back. */
+  async winback(actor: AuthUser, period: string) {
+    const rows = await withTerritoryScope(
+      this.prisma.db,
+      actor.territoryIds,
+      (tx) =>
+        tx.verification.findMany({
+          where: {
+            period,
+            outcome: 'LEFT',
+            placement: {
+              territoryId: { in: actor.territoryIds },
+              verifications: {
+                none: { outcome: 'WON_BACK', period: { gt: period } },
+              },
+            },
+          },
+          include: {
+            placement: {
+              include: {
+                candidate: { select: { id: true, name: true, phone: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+          take: 200,
+        }),
+    );
+    return {
+      period,
+      items: rows.map((v) => ({
+        placementId: v.placementId,
+        candidate: v.placement.candidate,
+        leftInPeriod: v.period,
+      })),
+    };
+  }
+
   /** Work-list: JOINED placements in the caller's territories missing this period's fact. */
   async due(actor: AuthUser, period: string) {
     const rows = await withTerritoryScope(

@@ -9,6 +9,17 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s
+          --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -29,4 +40,9 @@ jobs:
       - run: pnpm test
       # Contract drift: the committed openapi.json must match the manifest.
       - run: pnpm openapi:export && git diff --exit-code openapi/openapi.json
-      # TODO: prisma migrate diff --exit-code against a service container
+      # Migration drift: schema.prisma must be fully captured by migrations.
+      - run: |
+          pnpm --filter @ursainyk/db exec prisma migrate deploy
+          pnpm --filter @ursainyk/db exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci

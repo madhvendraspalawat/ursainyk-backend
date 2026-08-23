@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { AuditController } from './audit.controller';
+import { AnomaliesService } from './anomalies.service';
 import { AuditService } from './audit.service';
 import { DecisionService } from './decision.service';
 
@@ -10,7 +11,7 @@ import { DecisionService } from './decision.service';
 @Global()
 @Module({
   controllers: [AuditController],
-  providers: [AuditService, DecisionService],
+  providers: [AuditService, DecisionService, AnomaliesService],
   exports: [AuditService, DecisionService],
 })
 export class AuditModule {}

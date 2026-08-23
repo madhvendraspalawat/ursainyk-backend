@@ -81,6 +81,19 @@ model Credential {
   updatedAt      DateTime  @updatedAt
 }
 
+/// Single-use invite / password-reset links (production posture: temp
+/// passwords never travel in HTTP responses when email can deliver).
+model PasswordSetToken {
+  id        String    @id @default(uuid(7))
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
 /// Rotating refresh tokens with server-side revocation (ADR-0004).
 /// Reuse of a revoked token revokes the whole family.
 model RefreshToken {
@@ -511,6 +524,63 @@ model SystemConfig {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+// ── Website leads (migrated from nabhahitalandingpage per ADR-0003) ─────────
+
+enum Audience {
+  EMPLOYER
+  JOB_SEEKER
+  CENTRE_LEAD
+  OTHER
+}
+
+/// Written by the marketing site; Sales/BD views arrive later. Field shape is
+/// verbatim from the landing repo (cuid ids kept for continuity).
+model Lead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // What the visitor told us
+  audience  Audience
+  name      String
+  phone     String
+  email     String?
+  district  String?
+  sector    String? // employer leads
+  headcount String? // employer leads
+  message   String
+
+  // DPDP consent record
+  consentAt DateTime
+
+  // Attribution — last touch (the visit that converted)
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+  referrer    String?
+  landingPage String?
+
+  // Attribution — first touch (persisted from their first ever visit)
+  firstTouch Json?
+
+  // Journey context
+  convertingPage String?
+  pagesViewed    Json?
+  sessionCount   Int?
+  firstSeenAt    DateTime?
+
+  // Environment
+  userAgent  String?
+  deviceInfo Json?
+
+  // Ops
+  status String @default("new") // new → contacted → qualified → closed
+
+  @@index([createdAt])
+  @@index([audience, status])
 }
 
 // ── Notification templates (ADR-0010: multilingual, versioned, DB-stored) ───

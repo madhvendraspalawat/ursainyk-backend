@@ -497,6 +497,59 @@
         }
       }
     },
+    "/auth/password/set": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Redeem single-use set-password link (invite/reset)",
+        "operationId": "post_auth_password_set",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 32,
+                    "maxLength": 200
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "token",
+                  "newPassword"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/identity/users": {
       "post": {
         "tags": [
@@ -2361,6 +2414,46 @@
         "x-required-permission": "verification:create"
       }
     },
+    "/verifications/winback": {
+      "get": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Retention list: LEFT in period, not since won back",
+        "operationId": "get_verifications_winback",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "verification:create"
+      }
+    },
     "/scoring/presets": {
       "get": {
         "tags": [
@@ -3485,6 +3578,66 @@
             }
           }
         }
+      }
+    },
+    "/analytics/overview": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Territory rollups: candidates, pipeline, demand, verification, money",
+        "operationId": "get_analytics_overview",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "analytics:read"
+      }
+    },
+    "/audit/anomalies": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Anomaly views: verification spikes (+ mask-read patterns for Super Admin)",
+        "operationId": "get_audit_anomalies",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation failed (zod issues in body)"
+          },
+          "401": {
+            "description": "Missing/invalid token, or TOTP required"
+          },
+          "403": {
+            "description": "Role lacks the required permission"
+          }
+        },
+        "x-required-permission": "audit_log:read"
       }
     },
     "/audit/logs": {
