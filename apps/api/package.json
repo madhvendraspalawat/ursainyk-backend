@@ -38,7 +38,7 @@
     "@ursainyk/rbac": "workspace:^",
     "argon2": "^0.45.1",
     "dotenv": "^17.4.2",
-    "otplib": "^12.0.1",
+    "otplib": "^13.5.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
