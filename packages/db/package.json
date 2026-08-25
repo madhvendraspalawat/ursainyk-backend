@@ -16,7 +16,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.2.0",
     "@types/pg": "^8.15.0",
     "@ursainyk/config": "workspace:*",
     "dotenv": "^17.4.2",

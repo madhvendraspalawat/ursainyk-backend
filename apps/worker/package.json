@@ -13,7 +13,7 @@
     "start:dev": "tsx watch src/main.ts"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.2.0",
     "@types/nodemailer": "^8.0.1",
     "@ursainyk/config": "workspace:*",
     "tsx": "^4.20.0",
